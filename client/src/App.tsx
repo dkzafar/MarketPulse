@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
-import Markets from "@/pages/markets";
+import Markets from "@/pages/markets-new";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import MobileNav from "@/components/mobile-nav";

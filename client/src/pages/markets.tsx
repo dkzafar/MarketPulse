@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, TrendingDown, Activity, BarChart3, Globe, Zap } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TrendingUp, TrendingDown, Activity, BarChart3, Globe, Zap, Filter, SlidersHorizontal, RefreshCw } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface MarketIndex {
@@ -32,7 +32,10 @@ interface SectorData {
 }
 
 export default function MarketsPage() {
-  const [selectedTab, setSelectedTab] = useState("overview");
+  const [selectedAssetClass, setSelectedAssetClass] = useState("all");
+  const [sortBy, setSortBy] = useState("marketCap");
+  const [filterBy, setFilterBy] = useState("all");
+  const [priceRange, setPriceRange] = useState("all");
 
   // Real comprehensive market data from multiple sources
   const { data: marketData = [], isLoading: marketLoading } = useQuery({

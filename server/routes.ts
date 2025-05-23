@@ -5,8 +5,10 @@ import { insertWatchlistSchema } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || "default_key"
+// Use Groq for free, ultra-fast AI inference
+const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1"
 });
 
 // Yahoo Finance API functions
@@ -267,8 +269,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Keep descriptions under 100 characters each. Be confident and trader-friendly.
       `;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      const response = await groq.chat.completions.create({
+        model: "llama-3.1-70b-versatile", // Groq's best model for financial analysis
         messages: [
           {
             role: "system",
@@ -281,20 +283,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ],
         response_format: { type: "json_object" },
         max_tokens: 800,
+        temperature: 0.1,
       });
 
       const insights = JSON.parse(response.choices[0].message.content || "{}");
       res.json(insights);
     } catch (error) {
-      console.error("AI insights error:", error);
+      console.error("Groq AI insights error:", error);
       res.status(500).json({ 
         error: "Failed to generate AI insights",
         insights: {
           insights: [
             {
-              type: "error",
-              title: "AI Unavailable",
-              description: "AI insights temporarily unavailable. Please try again later.",
+              type: "technical",
+              title: "AI Analysis Unavailable",
+              description: "Free AI insights temporarily unavailable. Please try again in a moment.",
               sentiment: "neutral"
             }
           ]

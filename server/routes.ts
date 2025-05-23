@@ -123,30 +123,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register new user
   app.post("/api/auth/register", async (req, res) => {
+    console.log("🔥 REGISTER ROUTE HIT - Request body:", req.body);
+    console.log("🔥 Request headers:", req.headers);
+    
+    // Force JSON response headers
+    res.setHeader('Content-Type', 'application/json');
+    
     try {
       const { username, email, password, firstName, lastName } = req.body;
       
       // Basic validation
       if (!username || !email || !password) {
+        console.log("❌ Validation failed: missing fields");
         return res.status(400).json({ error: "Username, email, and password are required" });
       }
       
       if (password.length < 6) {
+        console.log("❌ Password too short");
         return res.status(400).json({ error: "Password must be at least 6 characters" });
       }
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
+        console.log("❌ User exists with email:", email);
         return res.status(400).json({ error: "User already exists with this email" });
       }
       
       const existingUsername = await storage.getUserByUsername(username);
       if (existingUsername) {
+        console.log("❌ Username taken:", username);
         return res.status(400).json({ error: "Username already taken" });
       }
       
       // Create new user (password will be hashed in storage)
+      console.log("✅ Creating user...");
       const newUser = await storage.createUser({
         username,
         email,
@@ -155,18 +166,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: lastName || null,
       });
       
+      console.log("✅ User created:", newUser.id);
+      
       // Create session
       req.session.userId = newUser.id;
       
       // Return user data without password
       const { password: _, ...userWithoutPassword } = newUser;
-      res.json({ 
+      const response = { 
         user: userWithoutPassword,
         message: "Registration successful" 
-      });
+      };
+      
+      console.log("✅ Sending response:", response);
+      return res.status(201).json(response);
     } catch (error: any) {
-      console.error("Registration error:", error);
-      res.status(500).json({ error: error.message || "Registration failed" });
+      console.error("❌ Registration error:", error);
+      return res.status(500).json({ error: error.message || "Registration failed" });
     }
   });
 

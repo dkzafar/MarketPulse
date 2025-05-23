@@ -6,11 +6,81 @@ import { z } from "zod";
 import OpenAI from "openai";
 import "./types"; // Import session type declarations
 
-// Use Groq for free, ultra-fast AI inference
+// Multiple free AI services for comprehensive analysis
 const groq = new OpenAI({
   apiKey: process.env.GROQ_API_KEY,
   baseURL: "https://api.groq.com/openai/v1"
 });
+
+// Free financial analysis APIs
+async function getCryptoAnalysis(symbol: string) {
+  try {
+    const response = await fetch(`https://api.coingecko.com/api/v3/coins/${symbol.toLowerCase()}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false&sparkline=false`);
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        technicalScore: data.coingecko_score || 0,
+        marketCap: data.market_data?.market_cap?.usd,
+        volume: data.market_data?.total_volume?.usd,
+        athChange: data.market_data?.ath_change_percentage?.usd,
+        sentiment: data.sentiment_votes_up_percentage > 60 ? 'bullish' : 'bearish'
+      };
+    }
+  } catch (error) {
+    console.log('CoinGecko analysis unavailable');
+  }
+  return null;
+}
+
+async function getForexAnalysis(pair: string) {
+  try {
+    // Using exchangerate.host for free forex data
+    const response = await fetch(`https://api.exchangerate.host/fluctuation?start_date=${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}&end_date=${new Date().toISOString().split('T')[0]}&base=${pair.slice(0, 3)}&symbols=${pair.slice(3)}`);
+    if (response.ok) {
+      const data = await response.json();
+      const rates = data.rates[pair.slice(3)];
+      return {
+        weeklyChange: rates?.change || 0,
+        volatility: Math.abs(rates?.change || 0),
+        trend: rates?.change > 0 ? 'bullish' : 'bearish'
+      };
+    }
+  } catch (error) {
+    console.log('Forex analysis unavailable');
+  }
+  return null;
+}
+
+async function getAdvancedAIAnalysis(symbol: string, category: string, marketData: any) {
+  try {
+    const prompt = `Analyze ${symbol} (${category}) with the following data:
+    Price: $${marketData.price}
+    24h Change: ${marketData.changePercent}%
+    Volume: ${marketData.volume}
+    Market Cap: ${marketData.marketCap}
+    
+    Provide a comprehensive trading analysis including:
+    1. Technical outlook (bullish/bearish/neutral)
+    2. Key support/resistance levels
+    3. Risk assessment (high/medium/low)
+    4. Trading recommendation (buy/sell/hold)
+    5. Price targets
+    
+    Format as JSON with keys: outlook, support, resistance, risk, recommendation, targets, reasoning`;
+
+    const response = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.1,
+      max_tokens: 500
+    });
+
+    return JSON.parse(response.choices[0].message.content || '{}');
+  } catch (error) {
+    console.log('AI analysis temporarily unavailable');
+    return null;
+  }
+}
 
 // Google Gemini for additional free AI analysis
 async function callGeminiAPI(prompt: string) {
@@ -624,10 +694,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Search stocks
+  // Comprehensive market data API for all asset classes
+  app.get("/api/market-data", async (req, res) => {
+    try {
+      const { symbols, category = "all" } = req.query;
+      const symbolList = Array.isArray(symbols) ? symbols : (symbols as string)?.split(',') || [];
+      
+      const results = [];
+
+      // Fetch crypto data from CoinGecko (free API)
+      if (category === "all" || category === "crypto") {
+        try {
+          const cryptoResponse = await fetch(
+            'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1'
+          );
+          if (cryptoResponse.ok) {
+            const cryptoData = await cryptoResponse.json();
+            results.push(...cryptoData.map((coin: any) => ({
+              symbol: coin.symbol.toUpperCase(),
+              name: coin.name,
+              price: coin.current_price,
+              change: coin.price_change_24h,
+              changePercent: coin.price_change_percentage_24h,
+              volume: coin.total_volume,
+              marketCap: coin.market_cap,
+              category: 'crypto'
+            })));
+          }
+        } catch (error) {
+          console.log('CoinGecko API unavailable');
+        }
+      }
+
+      // Fetch forex data from exchangerate.host (free API)
+      if (category === "all" || category === "forex") {
+        try {
+          const forexResponse = await fetch('https://api.exchangerate.host/latest?base=USD');
+          if (forexResponse.ok) {
+            const forexData = await forexResponse.json();
+            const majorPairs = ['EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD'];
+            results.push(...majorPairs.map(currency => ({
+              symbol: `USD${currency}`,
+              name: `USD/${currency}`,
+              price: forexData.rates[currency],
+              change: 0, // Would need historical data for this
+              changePercent: 0,
+              category: 'forex'
+            })));
+          }
+        } catch (error) {
+          console.log('Forex API unavailable');
+        }
+      }
+
+      res.json(results);
+    } catch (error) {
+      console.error('Market data error:', error);
+      res.status(500).json({ error: 'Failed to fetch market data' });
+    }
+  });
+
+  // Universal financial instrument search (stocks, crypto, forex, commodities)
   app.get("/api/search", async (req, res) => {
     try {
-      const { q } = req.query;
+      const { q, type = "all" } = req.query;
       
       if (!q || typeof q !== "string" || q.length < 1) {
         res.json([]);

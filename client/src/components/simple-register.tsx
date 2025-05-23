@@ -8,35 +8,28 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Eye, EyeOff, UserPlus, Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface RegisterFormData {
-  username: string;
-  email: string;
-  password: string;
-  firstName?: string;
-  lastName?: string;
-  confirmPassword: string;
-}
-
-interface RegisterFormProps {
+interface SimpleRegisterProps {
   onSuccess: () => void;
   onSwitchToLogin: () => void;
 }
 
-export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFormProps) {
+export default function SimpleRegister({ onSuccess, onSwitchToLogin }: SimpleRegisterProps) {
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch,
-  } = useForm<RegisterFormData>();
-
   const registerMutation = useMutation({
-    mutationFn: async (data: RegisterFormData) => {
+    mutationFn: async (data: typeof formData) => {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: {
@@ -47,8 +40,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       
       if (!response.ok) {
         const error = await response.json();
-        console.error("Registration error response:", error);
-        throw new Error(error.error || error.message || "Registration failed");
+        throw new Error(error.error || "Registration failed");
       }
       
       return response.json();
@@ -62,35 +54,36 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       onSuccess();
     },
     onError: (error: any) => {
-      toast({
-        title: "Registration failed",
-        description: error.message || "Please try again.",
-        variant: "destructive",
-      });
+      setError(error.message);
     },
   });
 
-  const onSubmit = (data: RegisterFormData) => {
-    // Simple client-side validation
-    if (data.password !== data.confirmPassword) {
-      toast({
-        title: "Password Error",
-        description: "Passwords don't match",
-        variant: "destructive",
-      });
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    setError(""); // Clear error when user types
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    // Simple validation
+    if (!formData.username || !formData.email || !formData.password) {
+      setError("Username, email, and password are required");
       return;
     }
-    
-    if (data.password.length < 6) {
-      toast({
-        title: "Password Error", 
-        description: "Password must be at least 6 characters",
-        variant: "destructive",
-      });
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
       return;
     }
-    
-    registerMutation.mutate(data);
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords don't match");
+      return;
+    }
+
+    registerMutation.mutate(formData);
   };
 
   return (
@@ -102,7 +95,7 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName" className="text-white">First Name</Label>
@@ -113,12 +106,10 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                   type="text"
                   placeholder="John"
                   className="pl-10 bg-slate-800 border-slate-600 text-white placeholder-slate-400"
-                  {...register("firstName")}
+                  value={formData.firstName}
+                  onChange={(e) => handleInputChange("firstName", e.target.value)}
                 />
               </div>
-              {errors.firstName && (
-                <p className="text-sm text-red-400">{errors.firstName.message}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -130,12 +121,10 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                   type="text"
                   placeholder="Doe"
                   className="pl-10 bg-slate-800 border-slate-600 text-white placeholder-slate-400"
-                  {...register("lastName")}
+                  value={formData.lastName}
+                  onChange={(e) => handleInputChange("lastName", e.target.value)}
                 />
               </div>
-              {errors.lastName && (
-                <p className="text-sm text-red-400">{errors.lastName.message}</p>
-              )}
             </div>
           </div>
 
@@ -148,12 +137,11 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                 type="text"
                 placeholder="trader123"
                 className="pl-10 bg-slate-800 border-slate-600 text-white placeholder-slate-400"
-                {...register("username")}
+                value={formData.username}
+                onChange={(e) => handleInputChange("username", e.target.value)}
+                required
               />
             </div>
-            {errors.username && (
-              <p className="text-sm text-red-400">{errors.username.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -165,12 +153,11 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                 type="email"
                 placeholder="john@example.com"
                 className="pl-10 bg-slate-800 border-slate-600 text-white placeholder-slate-400"
-                {...register("email")}
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                required
               />
             </div>
-            {errors.email && (
-              <p className="text-sm text-red-400">{errors.email.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -182,7 +169,9 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
                 className="pl-10 pr-10 bg-slate-800 border-slate-600 text-white placeholder-slate-400"
-                {...register("password")}
+                value={formData.password}
+                onChange={(e) => handleInputChange("password", e.target.value)}
+                required
               />
               <button
                 type="button"
@@ -192,9 +181,6 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {errors.password && (
-              <p className="text-sm text-red-400">{errors.password.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
@@ -206,7 +192,9 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="Confirm your password"
                 className="pl-10 pr-10 bg-slate-800 border-slate-600 text-white placeholder-slate-400"
-                {...register("confirmPassword")}
+                value={formData.confirmPassword}
+                onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                required
               />
               <button
                 type="button"
@@ -216,15 +204,12 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            {errors.confirmPassword && (
-              <p className="text-sm text-red-400">{errors.confirmPassword.message}</p>
-            )}
           </div>
 
-          {registerMutation.error && (
+          {error && (
             <Alert className="bg-red-900/20 border-red-700">
               <AlertDescription className="text-red-400">
-                {(registerMutation.error as any)?.message || "Registration failed. Please try again."}
+                {error}
               </AlertDescription>
             </Alert>
           )}

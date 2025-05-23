@@ -1,6 +1,6 @@
 import { useState } from "react";
 import LoginForm from "@/components/login-form";
-import RegisterForm from "@/components/register-form";
+import SimpleRegister from "@/components/simple-register";
 import { Redirect } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -39,7 +39,7 @@ export default function AuthPage() {
             onSwitchToRegister={() => setIsLogin(false)}
           />
         ) : (
-          <RegisterForm
+          <SimpleRegister
             onSuccess={handleAuthSuccess}
             onSwitchToLogin={() => setIsLogin(true)}
           />

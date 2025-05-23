@@ -236,6 +236,124 @@ export class MemStorage implements IStorage {
     this.newsArticles.push(newsArticle);
     return newsArticle;
   }
+
+  // Portfolio management methods
+  async getPortfolioPositions(userId: number): Promise<PortfolioPosition[]> {
+    const positions: PortfolioPosition[] = [];
+    for (const [key, position] of this.portfolioPositions) {
+      if (key.startsWith(`${userId}-`)) {
+        positions.push(position);
+      }
+    }
+    return positions;
+  }
+
+  async getPortfolioPosition(userId: number, symbol: string): Promise<PortfolioPosition | undefined> {
+    return this.portfolioPositions.get(`${userId}-${symbol}`);
+  }
+
+  async addTransaction(transaction: InsertTransaction): Promise<Transaction> {
+    const newTransaction: Transaction = {
+      id: this.currentTransactionId++,
+      ...transaction,
+      executedAt: new Date(),
+    };
+
+    this.transactions.push(newTransaction);
+    await this.updatePortfolioAfterTransaction(newTransaction);
+    return newTransaction;
+  }
+
+  async getTransactions(userId: number, symbol?: string): Promise<Transaction[]> {
+    return this.transactions.filter(t => 
+      t.userId === userId && (!symbol || t.symbol === symbol)
+    );
+  }
+
+  async updatePortfolioPosition(userId: number, symbol: string, updates: Partial<PortfolioPosition>): Promise<PortfolioPosition> {
+    const key = `${userId}-${symbol}`;
+    const existing = this.portfolioPositions.get(key);
+    
+    if (!existing) {
+      throw new Error("Position not found");
+    }
+
+    const updated: PortfolioPosition = {
+      ...existing,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    this.portfolioPositions.set(key, updated);
+    return updated;
+  }
+
+  async deletePortfolioPosition(userId: number, symbol: string): Promise<void> {
+    this.portfolioPositions.delete(`${userId}-${symbol}`);
+  }
+
+  private async updatePortfolioAfterTransaction(transaction: Transaction): Promise<void> {
+    const key = `${transaction.userId}-${transaction.symbol}`;
+    const existing = this.portfolioPositions.get(key);
+    
+    const quantity = parseFloat(transaction.quantity);
+    const totalAmount = parseFloat(transaction.totalAmount);
+
+    if (!existing) {
+      if (transaction.type === 'buy') {
+        const newPosition: PortfolioPosition = {
+          id: this.currentPositionId++,
+          userId: transaction.userId,
+          symbol: transaction.symbol,
+          quantity: transaction.quantity,
+          averagePrice: transaction.price,
+          totalCost: transaction.totalAmount,
+          currentValue: null,
+          unrealizedPnL: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        this.portfolioPositions.set(key, newPosition);
+      }
+    } else {
+      const existingQuantity = parseFloat(existing.quantity);
+      const existingCost = parseFloat(existing.totalCost);
+      
+      if (transaction.type === 'buy') {
+        const newQuantity = existingQuantity + quantity;
+        const newTotalCost = existingCost + totalAmount;
+        const newAveragePrice = newTotalCost / newQuantity;
+        
+        const updated: PortfolioPosition = {
+          ...existing,
+          quantity: newQuantity.toString(),
+          averagePrice: newAveragePrice.toString(),
+          totalCost: newTotalCost.toString(),
+          updatedAt: new Date(),
+        };
+        
+        this.portfolioPositions.set(key, updated);
+      } else if (transaction.type === 'sell') {
+        const newQuantity = existingQuantity - quantity;
+        
+        if (newQuantity <= 0) {
+          this.portfolioPositions.delete(key);
+        } else {
+          const proportionSold = quantity / existingQuantity;
+          const newTotalCost = existingCost * (1 - proportionSold);
+          
+          const updated: PortfolioPosition = {
+            ...existing,
+            quantity: newQuantity.toString(),
+            totalCost: newTotalCost.toString(),
+            updatedAt: new Date(),
+          };
+          
+          this.portfolioPositions.set(key, updated);
+        }
+      }
+    }
+  }
 }
 
 export const storage = new MemStorage();

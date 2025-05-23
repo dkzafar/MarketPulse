@@ -83,8 +83,30 @@ export class MemStorage implements IStorage {
     this.currentPositionId = 1;
     this.currentTransactionId = 1;
 
+    // Create demo user account
+    this.createDemoUser();
+
     // Add sample portfolio data for user 1
     this.addSamplePortfolioData();
+  }
+
+  private async createDemoUser() {
+    const bcrypt = await import('bcrypt');
+    const hashedPassword = await bcrypt.hash('password123', 10);
+    
+    const demoUser: User = {
+      id: 1,
+      username: 'demo',
+      email: 'test@example.com',
+      passwordHash: hashedPassword,
+      firstName: 'Demo',
+      lastName: 'User',
+      createdAt: new Date(),
+      lastLoginAt: null,
+    };
+    
+    this.users.set(1, demoUser);
+    this.currentUserId = 2;
   }
 
   private addSamplePortfolioData() {

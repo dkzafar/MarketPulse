@@ -44,21 +44,9 @@ export default function PortfolioOverview() {
 
   const queryClient = useQueryClient();
 
-  const { data: positions = [], isLoading } = useQuery<PortfolioPosition[]>({
+  const { data: positions = [], isLoading, error } = useQuery<PortfolioPosition[]>({
     queryKey: ['/api/portfolio'],
-    queryFn: async () => {
-      const response = await fetch('/api/portfolio', {
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch portfolio');
-      }
-      return response.json();
-    }
+    queryFn: () => apiRequest('/api/portfolio'),
   });
 
   const addTransactionMutation = useMutation({

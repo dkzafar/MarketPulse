@@ -90,27 +90,34 @@ export class MemStorage implements IStorage {
     this.addSamplePortfolioData();
   }
 
-  private createDemoUser() {
-    // Using a simple known hash for demo purposes
-    const demoUser: User = {
-      id: 1,
-      username: 'demo',
-      email: 'test@example.com',
-      password: '$2b$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', // password123
-      firstName: 'Demo',
-      lastName: 'User',
-      profileImage: null,
-      bio: null,
-      isVerified: false,
-      totalTrades: 0,
-      successfulTrades: 0,
-      portfolioValue: 10000,
-      joinedAt: new Date(),
-      lastLogin: null,
-    };
-    
-    this.users.set(1, demoUser);
-    this.currentUserId = 2;
+  private async createDemoUser() {
+    try {
+      // Create a proper bcrypt hash for the demo user
+      const hashedPassword = await bcrypt.hash('password123', 10);
+      
+      const demoUser: User = {
+        id: 1,
+        username: 'demo',
+        email: 'test@example.com',
+        password: hashedPassword,
+        firstName: 'Demo',
+        lastName: 'User',
+        profileImage: null,
+        bio: null,
+        isVerified: false,
+        totalTrades: 0,
+        successfulTrades: 0,
+        portfolioValue: 10000,
+        joinedAt: new Date(),
+        lastLogin: null,
+      };
+      
+      this.users.set(1, demoUser);
+      this.currentUserId = 2;
+      console.log('✓ Demo user created successfully');
+    } catch (error) {
+      console.error('Error creating demo user:', error);
+    }
   }
 
   private addSamplePortfolioData() {

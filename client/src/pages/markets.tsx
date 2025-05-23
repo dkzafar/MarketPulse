@@ -104,7 +104,7 @@ export default function MarketsPage() {
             <span className="hidden sm:inline">Forex</span>
           </TabsTrigger>
           <TabsTrigger value="commodities" className="data-[state=active]:bg-red-600">
-            <Search className="h-4 w-4 mr-1" />
+            <Zap className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">Commodities</span>
           </TabsTrigger>
           <TabsTrigger value="movers" className="data-[state=active]:bg-red-600">
@@ -362,7 +362,7 @@ export default function MarketsPage() {
           <Card className="bg-gray-900 border-gray-800">
             <CardHeader>
               <CardTitle className="text-white flex items-center">
-                <Search className="h-5 w-5 mr-2" />
+                <Zap className="h-5 w-5 mr-2" />
                 Commodities & Futures
               </CardTitle>
             </CardHeader>

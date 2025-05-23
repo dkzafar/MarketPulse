@@ -36,11 +36,20 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterFormData) => {
-      const response = await apiRequest("/api/auth/register", {
+      const response = await fetch("/api/auth/register", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
-      return response;
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Registration failed");
+      }
+      
+      return response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });

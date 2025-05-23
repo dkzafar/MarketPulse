@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
 
 interface AuthResponse {
@@ -11,18 +10,37 @@ export function useAuth() {
   const queryClient = useQueryClient();
 
   // Get current user
-  const { data: user, isLoading, error } = useQuery<User>({
+  const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/me"],
-    queryFn: () => apiRequest("/api/auth/me"),
+    queryFn: async () => {
+      const response = await fetch("/api/auth/me");
+      if (!response.ok) {
+        if (response.status === 401) {
+          return null; // Not authenticated
+        }
+        throw new Error("Failed to get user data");
+      }
+      const data = await response.json();
+      return data.user || data; // Handle nested response format
+    },
     retry: false,
   });
 
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("/api/auth/logout", {
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
+      
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
       queryClient.clear();
@@ -35,7 +53,7 @@ export function useAuth() {
   };
 
   return {
-    user: user?.user || user, // Handle nested response format
+    user,
     isLoading,
     isAuthenticated: !!user,
     logout,

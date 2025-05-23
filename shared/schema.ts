@@ -50,6 +50,32 @@ export const newsArticles = pgTable("news_articles", {
   publishedAt: timestamp("published_at").notNull(),
 });
 
+export const portfolioPositions = pgTable("portfolio_positions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  symbol: text("symbol").notNull(),
+  quantity: text("quantity").notNull(), // Store as string to avoid precision issues
+  averagePrice: text("average_price").notNull(),
+  totalCost: text("total_cost").notNull(),
+  currentValue: text("current_value"),
+  unrealizedPnL: text("unrealized_pnl"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const transactions = pgTable("transactions", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  symbol: text("symbol").notNull(),
+  type: text("type").notNull(), // 'buy', 'sell'
+  quantity: text("quantity").notNull(),
+  price: text("price").notNull(),
+  totalAmount: text("total_amount").notNull(),
+  fees: text("fees").default("0"),
+  executedAt: timestamp("executed_at").defaultNow(),
+  notes: text("notes"),
+});
+
 // User authentication schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -96,6 +122,25 @@ export const insertNewsArticleSchema = createInsertSchema(newsArticles).omit({
   id: true,
 });
 
+export const insertPortfolioPositionSchema = createInsertSchema(portfolioPositions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  executedAt: true,
+});
+
+export const addPositionSchema = z.object({
+  symbol: z.string().min(1).max(10),
+  quantity: z.string(),
+  price: z.string(),
+  type: z.enum(["buy", "sell"]),
+  notes: z.string().optional(),
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertWatchlist = z.infer<typeof insertWatchlistSchema>;
@@ -104,3 +149,7 @@ export type InsertStockQuote = z.infer<typeof insertStockQuoteSchema>;
 export type StockQuote = typeof stockQuotes.$inferSelect;
 export type InsertNewsArticle = z.infer<typeof insertNewsArticleSchema>;
 export type NewsArticle = typeof newsArticles.$inferSelect;
+export type InsertPortfolioPosition = z.infer<typeof insertPortfolioPositionSchema>;
+export type PortfolioPosition = typeof portfolioPositions.$inferSelect;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactions.$inferSelect;

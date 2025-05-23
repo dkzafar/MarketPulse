@@ -3,6 +3,8 @@ import {
   watchlists, 
   stockQuotes, 
   newsArticles,
+  portfolioPositions,
+  transactions,
   type User, 
   type InsertUser,
   type Watchlist,
@@ -10,7 +12,11 @@ import {
   type StockQuote,
   type InsertStockQuote,
   type NewsArticle,
-  type InsertNewsArticle
+  type InsertNewsArticle,
+  type PortfolioPosition,
+  type InsertPortfolioPosition,
+  type Transaction,
+  type InsertTransaction
 } from "@shared/schema";
 import bcrypt from "bcrypt";
 
@@ -39,6 +45,14 @@ export interface IStorage {
   // News
   getNewsForSymbol(symbol: string, limit?: number): Promise<NewsArticle[]>;
   createNewsArticle(article: InsertNewsArticle): Promise<NewsArticle>;
+  
+  // Portfolio management
+  getPortfolioPositions(userId: number): Promise<PortfolioPosition[]>;
+  getPortfolioPosition(userId: number, symbol: string): Promise<PortfolioPosition | undefined>;
+  addTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  getTransactions(userId: number, symbol?: string): Promise<Transaction[]>;
+  updatePortfolioPosition(userId: number, symbol: string, position: Partial<PortfolioPosition>): Promise<PortfolioPosition>;
+  deletePortfolioPosition(userId: number, symbol: string): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -46,20 +60,28 @@ export class MemStorage implements IStorage {
   private watchlists: Map<number, Watchlist>;
   private stockQuotes: Map<string, StockQuote>;
   private newsArticles: NewsArticle[];
+  private portfolioPositions: Map<string, PortfolioPosition>; // key: userId-symbol
+  private transactions: Transaction[];
   private currentUserId: number;
   private currentWatchlistId: number;
   private currentQuoteId: number;
   private currentNewsId: number;
+  private currentPositionId: number;
+  private currentTransactionId: number;
 
   constructor() {
     this.users = new Map();
     this.watchlists = new Map();
     this.stockQuotes = new Map();
     this.newsArticles = [];
+    this.portfolioPositions = new Map();
+    this.transactions = [];
     this.currentUserId = 1;
     this.currentWatchlistId = 1;
     this.currentQuoteId = 1;
     this.currentNewsId = 1;
+    this.currentPositionId = 1;
+    this.currentTransactionId = 1;
   }
 
   async getUser(id: number): Promise<User | undefined> {

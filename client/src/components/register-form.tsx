@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { registerSchema } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +11,14 @@ import { Eye, EyeOff, UserPlus, Mail, Lock, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { z } from "zod";
 
-type RegisterFormData = z.infer<typeof registerSchema>;
+interface RegisterFormData {
+  username: string;
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  confirmPassword: string;
+}
 
 interface RegisterFormProps {
   onSuccess: () => void;
@@ -30,9 +35,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterFormData>({
-    resolver: zodResolver(registerSchema),
-  });
+    watch,
+  } = useForm<RegisterFormData>();
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterFormData) => {
@@ -70,6 +74,25 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
   });
 
   const onSubmit = (data: RegisterFormData) => {
+    // Simple client-side validation
+    if (data.password !== data.confirmPassword) {
+      toast({
+        title: "Password Error",
+        description: "Passwords don't match",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (data.password.length < 6) {
+      toast({
+        title: "Password Error", 
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     registerMutation.mutate(data);
   };
 

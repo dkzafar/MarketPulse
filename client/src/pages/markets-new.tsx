@@ -111,11 +111,6 @@ export default function MarketsPage() {
   };
 
   const filteredData = getFilteredData();
-  
-  // Debug logging to track data flow
-  console.log('Raw market data:', marketData.length, 'items');
-  console.log('Filtered data:', filteredData.length, 'items');
-  console.log('Current filters:', { selectedAssetClass, filterBy, priceRange, sortBy });
 
   // Utility functions
   const formatPrice = (price: number) => {

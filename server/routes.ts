@@ -7,9 +7,13 @@ import type { AuthenticatedRequest } from "./types";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // LIVE MARKET DATA ENDPOINT - Fixed and working
-  app.get("/api/market-data", (req: Request, res: Response) => {
-    console.log("🔥 Market Data API Successfully Hit!");
+  // Direct middleware to handle API routes before Vite intercepts them
+  app.use("/api/market-data", (req: Request, res: Response) => {
+    console.log("🔥 Direct Market Data Handler Hit!");
+    
+    // Set proper headers to ensure JSON response
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
     
     try {
       // Live market data from multiple sources

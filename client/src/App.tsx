@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
+import Markets from "@/pages/markets";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import MobileNav from "@/components/mobile-nav";
@@ -39,6 +40,9 @@ function Router() {
           <Route path="/auth" component={AuthPage} />
           <Route path="/portfolio">
             <ProtectedRoute component={Portfolio} />
+          </Route>
+          <Route path="/markets">
+            <ProtectedRoute component={Markets} />
           </Route>
           <Route path="/">
             <ProtectedRoute component={Dashboard} />

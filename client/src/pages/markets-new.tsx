@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, Activity, BarChart3, Globe, Zap, Filter, SlidersHorizontal, RefreshCw } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { TrendingUp, TrendingDown, Activity, BarChart3, Globe, Zap, Filter, SlidersHorizontal, RefreshCw, Brain, Sparkles, Target } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function MarketsPage() {
@@ -12,11 +13,35 @@ export default function MarketsPage() {
   const [sortBy, setSortBy] = useState("marketCap");
   const [filterBy, setFilterBy] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
+  const [selectedAsset, setSelectedAsset] = useState<any>(null);
+
+  // AI Market Analysis mutation
+  const aiAnalysis = useMutation({
+    mutationFn: async (asset: any) => {
+      const response = await fetch('/api/ai-market-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: asset.symbol,
+          price: asset.price,
+          changePercent: asset.changePercent,
+          volume: asset.volume,
+          category: asset.category
+        })
+      });
+      if (!response.ok) throw new Error('AI analysis failed');
+      return response.json();
+    }
+  });
 
   // Real comprehensive market data from multiple sources
   const { data: marketData = [], isLoading: marketLoading, refetch } = useQuery({
     queryKey: ['/api/market-data', selectedAssetClass],
-    queryFn: () => apiRequest('/api/market-data'),
+    queryFn: async () => {
+      const response = await fetch('/api/market-data');
+      if (!response.ok) throw new Error('Failed to fetch market data');
+      return response.json();
+    },
     staleTime: 5000,
     refetchInterval: 30000, // Refresh every 30 seconds
   });
@@ -293,9 +318,114 @@ export default function MarketsPage() {
                     )}
                   </div>
 
-                  <div className="flex items-center space-x-1">
-                    {getAssetClassInfo(asset.category).icon}
-                    <span className="text-xs text-gray-500 capitalize">{asset.category}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-1">
+                      {getAssetClassInfo(asset.category).icon}
+                      <span className="text-xs text-gray-500 capitalize">{asset.category}</span>
+                    </div>
+                    
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          className="h-6 px-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                          onClick={() => {
+                            setSelectedAsset(asset);
+                            aiAnalysis.mutate(asset);
+                          }}
+                        >
+                          <Brain className="h-3 w-3 mr-1" />
+                          AI
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center space-x-2">
+                            <Sparkles className="h-5 w-5 text-purple-500" />
+                            <span>AI Market Analysis - {selectedAsset?.symbol}</span>
+                          </DialogTitle>
+                        </DialogHeader>
+                        
+                        {aiAnalysis.isPending ? (
+                          <div className="flex items-center justify-center py-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                            <span className="ml-3 text-gray-400">Analyzing market data...</span>
+                          </div>
+                        ) : aiAnalysis.data ? (
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between p-4 bg-gray-800 rounded-lg">
+                              <div>
+                                <h3 className="font-semibold text-lg">{selectedAsset?.symbol}</h3>
+                                <p className="text-gray-400">${formatPrice(selectedAsset?.price)} 
+                                  <span className={`ml-2 ${selectedAsset?.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                    ({formatPercent(selectedAsset?.changePercent)})
+                                  </span>
+                                </p>
+                              </div>
+                              <Badge 
+                                className={`${
+                                  aiAnalysis.data.analysis.sentiment === 'bullish' ? 'bg-green-600' :
+                                  aiAnalysis.data.analysis.sentiment === 'bearish' ? 'bg-red-600' : 'bg-yellow-600'
+                                }`}
+                              >
+                                {aiAnalysis.data.analysis.sentiment.toUpperCase()}
+                              </Badge>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="p-3 bg-gray-800 rounded-lg">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <Target className="h-4 w-4 text-blue-400" />
+                                  <span className="text-sm text-gray-400">Price Target</span>
+                                </div>
+                                <p className="text-lg font-semibold">{aiAnalysis.data.analysis.priceTarget}</p>
+                              </div>
+                              
+                              <div className="p-3 bg-gray-800 rounded-lg">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <Activity className="h-4 w-4 text-orange-400" />
+                                  <span className="text-sm text-gray-400">Risk Level</span>
+                                </div>
+                                <Badge variant={aiAnalysis.data.analysis.riskLevel === 'low' ? 'default' : 'destructive'}>
+                                  {aiAnalysis.data.analysis.riskLevel.toUpperCase()}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="p-4 bg-gray-800 rounded-lg">
+                              <h4 className="font-medium mb-2 flex items-center">
+                                <Brain className="h-4 w-4 mr-2 text-purple-400" />
+                                AI Summary
+                              </h4>
+                              <p className="text-gray-300 text-sm">{aiAnalysis.data.analysis.summary}</p>
+                            </div>
+
+                            <div className="p-4 bg-gray-800 rounded-lg">
+                              <h4 className="font-medium mb-3">Key Analysis Points</h4>
+                              <ul className="space-y-2">
+                                {aiAnalysis.data.analysis.keyPoints.map((point: string, idx: number) => (
+                                  <li key={idx} className="flex items-start space-x-2">
+                                    <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                                    <span className="text-sm text-gray-300">{point}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs text-gray-500 border-t border-gray-700 pt-3">
+                              <span>Powered by Free AI Analysis</span>
+                              <span>Confidence: {Math.round(aiAnalysis.data.analysis.confidence * 100)}%</span>
+                            </div>
+                          </div>
+                        ) : aiAnalysis.error ? (
+                          <div className="text-center py-8">
+                            <p className="text-red-400 mb-4">AI analysis temporarily unavailable</p>
+                            <p className="text-gray-500 text-sm">Please try again or contact support for API key setup</p>
+                          </div>
+                        ) : null}
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               </CardContent>

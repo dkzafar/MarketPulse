@@ -157,10 +157,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Registration error:", error);
+      console.error("Error details:", JSON.stringify(error, null, 2));
       if (error?.errors) {
         return res.status(400).json({ error: "Validation failed", details: error.errors });
       }
-      res.status(500).json({ error: "Registration failed" });
+      if (error?.issues) {
+        return res.status(400).json({ error: "Validation failed", details: error.issues });
+      }
+      res.status(500).json({ error: error.message || "Registration failed" });
     }
   });
 

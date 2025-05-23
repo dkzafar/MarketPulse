@@ -46,7 +46,8 @@ export default function RegisterForm({ onSuccess, onSwitchToLogin }: RegisterFor
       
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Registration failed");
+        console.error("Registration error response:", error);
+        throw new Error(error.error || error.message || "Registration failed");
       }
       
       return response.json();

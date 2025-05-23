@@ -8,6 +8,7 @@ import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
+import MobileNav from "@/components/mobile-nav";
 
 function ProtectedRoute({ component: Component, ...props }: any) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -28,14 +29,24 @@ function ProtectedRoute({ component: Component, ...props }: any) {
 }
 
 function Router() {
+  const { isAuthenticated } = useAuth();
+  
   return (
-    <Switch>
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/">
-        <ProtectedRoute component={Dashboard} />
-      </Route>
-      <Route component={NotFound} />
-    </Switch>
+    <div className="flex">
+      {isAuthenticated && <MobileNav />}
+      <div className={`flex-1 ${isAuthenticated ? 'lg:ml-64 pb-16 lg:pb-0' : ''}`}>
+        <Switch>
+          <Route path="/auth" component={AuthPage} />
+          <Route path="/portfolio">
+            <ProtectedRoute component={Portfolio} />
+          </Route>
+          <Route path="/">
+            <ProtectedRoute component={Dashboard} />
+          </Route>
+          <Route component={NotFound} />
+        </Switch>
+      </div>
+    </div>
   );
 }
 

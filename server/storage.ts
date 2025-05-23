@@ -82,6 +82,61 @@ export class MemStorage implements IStorage {
     this.currentNewsId = 1;
     this.currentPositionId = 1;
     this.currentTransactionId = 1;
+
+    // Add sample portfolio data for user 1
+    this.addSamplePortfolioData();
+  }
+
+  private addSamplePortfolioData() {
+    // Sample positions for user 1
+    const positions = [
+      { symbol: 'AAPL', quantity: '100', avgPrice: '150.25', totalCost: '15025.00' },
+      { symbol: 'TSLA', quantity: '50', avgPrice: '245.80', totalCost: '12290.00' },
+      { symbol: 'MSFT', quantity: '75', avgPrice: '335.50', totalCost: '25162.50' },
+      { symbol: 'GOOGL', quantity: '25', avgPrice: '2850.00', totalCost: '71250.00' },
+      { symbol: 'NVDA', quantity: '40', avgPrice: '420.75', totalCost: '16830.00' }
+    ];
+
+    positions.forEach(pos => {
+      const position: PortfolioPosition = {
+        id: this.currentPositionId++,
+        userId: 1,
+        symbol: pos.symbol,
+        quantity: pos.quantity,
+        averagePrice: pos.avgPrice,
+        totalCost: pos.totalCost,
+        currentValue: null,
+        unrealizedPnL: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      this.portfolioPositions.set(`1-${pos.symbol}`, position);
+    });
+
+    // Add sample transactions
+    const transactions = [
+      { symbol: 'AAPL', type: 'buy', quantity: '100', price: '150.25', amount: '15025.00', notes: 'Initial Apple position' },
+      { symbol: 'TSLA', type: 'buy', quantity: '50', price: '245.80', amount: '12290.00', notes: 'Tesla investment' },
+      { symbol: 'MSFT', type: 'buy', quantity: '75', price: '335.50', amount: '25162.50', notes: 'Microsoft shares' },
+      { symbol: 'GOOGL', type: 'buy', quantity: '25', price: '2850.00', amount: '71250.00', notes: 'Google stock purchase' },
+      { symbol: 'NVDA', type: 'buy', quantity: '40', price: '420.75', amount: '16830.00', notes: 'NVIDIA position' }
+    ];
+
+    transactions.forEach(txn => {
+      const transaction: Transaction = {
+        id: this.currentTransactionId++,
+        userId: 1,
+        symbol: txn.symbol,
+        type: txn.type as 'buy' | 'sell',
+        quantity: txn.quantity,
+        price: txn.price,
+        totalAmount: txn.amount,
+        fees: "0",
+        notes: txn.notes,
+        executedAt: new Date(),
+      };
+      this.transactions.push(transaction);
+    });
   }
 
   async getUser(id: number): Promise<User | undefined> {

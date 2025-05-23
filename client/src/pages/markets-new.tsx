@@ -77,13 +77,13 @@ export default function MarketsPage() {
     if (filterBy !== "all") {
       switch (filterBy) {
         case "gainers":
-          filtered = filtered.filter((item: any) => item.changePercent > 0);
+          filtered = filtered.filter((item: any) => item.changePercent > 0).slice(0, 50);
           break;
         case "losers":
-          filtered = filtered.filter((item: any) => item.changePercent < 0);
+          filtered = filtered.filter((item: any) => item.changePercent < 0).slice(0, 50);
           break;
         case "active":
-          filtered = filtered.filter((item: any) => item.volume > 1000000);
+          filtered = filtered.filter((item: any) => (item.volume || 0) > 100000).slice(0, 50);
           break;
       }
     }
@@ -111,6 +111,11 @@ export default function MarketsPage() {
   };
 
   const filteredData = getFilteredData();
+  
+  // Debug logging to track data flow
+  console.log('Raw market data:', marketData.length, 'items');
+  console.log('Filtered data:', filteredData.length, 'items');
+  console.log('Current filters:', { selectedAssetClass, filterBy, priceRange, sortBy });
 
   // Utility functions
   const formatPrice = (price: number) => {

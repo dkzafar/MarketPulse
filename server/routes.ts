@@ -740,7 +740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               name: `USD/${currency}`,
               price: forexData.rates[currency] || 1,
               change: Math.random() * 0.1 - 0.05, // Small random change for demo
-              changePercent: (Math.random() * 2 - 1).toFixed(2),
+              changePercent: parseFloat((Math.random() * 10 - 5).toFixed(2)), // Mix of positive and negative
               volume: Math.floor(Math.random() * 1000000),
               category: 'forex'
             }));

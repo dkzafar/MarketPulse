@@ -119,14 +119,17 @@ async function fetchYahooNews(symbol: string) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Test route to verify API routing works
+  app.get("/api/test", (req, res) => {
+    res.json({ message: "API routing works!" });
+  });
+  
   // User Authentication Routes
   
   // Register new user
   app.post("/api/auth/register", async (req, res) => {
     console.log("🔥 REGISTER ROUTE HIT - Request body:", req.body);
-    console.log("🔥 Request headers:", req.headers);
     
-    // Force JSON response headers
     res.setHeader('Content-Type', 'application/json');
     
     try {

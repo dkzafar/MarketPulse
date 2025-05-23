@@ -119,6 +119,47 @@ async function fetchYahooNews(symbol: string) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
+  // Portfolio Routes - MUST BE FIRST to avoid routing conflicts
+  app.get("/api/portfolio", async (req, res) => {
+    try {
+      const session = req.session as any;
+      if (!session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const positions = await storage.getPortfolioPositions(session.userId);
+      return res.json(positions);
+    } catch (error: any) {
+      return res.status(500).json({ error: "Failed to fetch portfolio" });
+    }
+  });
+
+  app.post("/api/portfolio/transaction", async (req, res) => {
+    try {
+      const session = req.session as any;
+      if (!session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      const { symbol, quantity, price, type, notes } = req.body;
+      const quantityNum = parseFloat(quantity);
+      const priceNum = parseFloat(price);
+      const totalAmount = quantityNum * priceNum;
+
+      const transaction = await storage.addTransaction({
+        userId: session.userId,
+        symbol: symbol.toUpperCase(),
+        type,
+        quantity,
+        price,
+        totalAmount: totalAmount.toString(),
+        fees: "0",
+        notes: notes || null,
+      });
+      return res.status(201).json(transaction);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message || "Failed to add transaction" });
+    }
+  });
+  
   // Test route to verify API routing works
   app.get("/api/test", (req, res) => {
     res.json({ message: "API routing works!" });
@@ -581,47 +622,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Portfolio Routes
-  app.get("/api/portfolio", async (req, res) => {
-    try {
-      const session = req.session as any;
-      if (!session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-      const positions = await storage.getPortfolioPositions(session.userId);
-      res.setHeader('Content-Type', 'application/json');
-      res.json(positions);
-    } catch (error: any) {
-      res.setHeader('Content-Type', 'application/json');
-      res.status(500).json({ error: "Failed to fetch portfolio" });
-    }
-  });
 
-  app.post("/api/portfolio/transaction", async (req: AuthenticatedRequest, res) => {
-    try {
-      if (!req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-      const { symbol, quantity, price, type, notes } = req.body;
-      const quantityNum = parseFloat(quantity);
-      const priceNum = parseFloat(price);
-      const totalAmount = quantityNum * priceNum;
-
-      const transaction = await storage.addTransaction({
-        userId: req.session.userId,
-        symbol: symbol.toUpperCase(),
-        type,
-        quantity,
-        price,
-        totalAmount: totalAmount.toString(),
-        fees: "0",
-        notes: notes || null,
-      });
-      res.status(201).json(transaction);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message || "Failed to add transaction" });
-    }
-  });
 
   // Search stocks
   app.get("/api/search", async (req, res) => {

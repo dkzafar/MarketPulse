@@ -44,62 +44,22 @@ export default function PortfolioOverview() {
 
   const queryClient = useQueryClient();
 
-  // Sample portfolio data for demonstration
-  const samplePositions = [
-    {
-      id: 1,
-      symbol: 'AAPL',
-      quantity: '100',
-      averagePrice: '150.25',
-      totalCost: '15025.00',
-      currentValue: '19527.00',
-      unrealizedPnL: '4502.00',
-      createdAt: '2025-01-15'
-    },
-    {
-      id: 2,
-      symbol: 'TSLA',
-      quantity: '50',
-      averagePrice: '245.80',
-      totalCost: '12290.00',
-      currentValue: '10850.00',
-      unrealizedPnL: '-1440.00',
-      createdAt: '2025-01-20'
-    },
-    {
-      id: 3,
-      symbol: 'MSFT',
-      quantity: '75',
-      averagePrice: '335.50',
-      totalCost: '25162.50',
-      currentValue: '31725.00',
-      unrealizedPnL: '6562.50',
-      createdAt: '2025-01-25'
-    },
-    {
-      id: 4,
-      symbol: 'GOOGL',
-      quantity: '25',
-      averagePrice: '2850.00',
-      totalCost: '71250.00',
-      currentValue: '42875.00',
-      unrealizedPnL: '-28375.00',
-      createdAt: '2025-02-01'
-    },
-    {
-      id: 5,
-      symbol: 'NVDA',
-      quantity: '40',
-      averagePrice: '420.75',
-      totalCost: '16830.00',
-      currentValue: '22800.00',
-      unrealizedPnL: '5970.00',
-      createdAt: '2025-02-10'
+  const { data: positions = [], isLoading } = useQuery<PortfolioPosition[]>({
+    queryKey: ['/api/portfolio'],
+    queryFn: async () => {
+      const response = await fetch('/api/portfolio', {
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch portfolio');
+      }
+      return response.json();
     }
-  ];
-
-  const positions = samplePositions;
-  const isLoading = false;
+  });
 
   const addTransactionMutation = useMutation({
     mutationFn: (transaction: typeof newTransaction) =>

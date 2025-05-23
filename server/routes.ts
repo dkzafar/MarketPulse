@@ -124,46 +124,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register new user
   app.post("/api/auth/register", async (req, res) => {
     try {
-      const userData = registerSchema.parse(req.body);
+      const { username, email, password, firstName, lastName } = req.body;
+      
+      // Basic validation
+      if (!username || !email || !password) {
+        return res.status(400).json({ error: "Username, email, and password are required" });
+      }
+      
+      if (password.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters" });
+      }
       
       // Check if user already exists
-      const existingUser = await storage.getUserByEmail(userData.email);
+      const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({ error: "User already exists with this email" });
       }
       
-      const existingUsername = await storage.getUserByUsername(userData.username);
+      const existingUsername = await storage.getUserByUsername(username);
       if (existingUsername) {
         return res.status(400).json({ error: "Username already taken" });
       }
       
       // Create new user (password will be hashed in storage)
       const newUser = await storage.createUser({
-        username: userData.username,
-        email: userData.email,
-        password: userData.password,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
+        username,
+        email,
+        password,
+        firstName: firstName || null,
+        lastName: lastName || null,
       });
       
       // Create session
       req.session.userId = newUser.id;
       
       // Return user data without password
-      const { password, ...userWithoutPassword } = newUser;
+      const { password: _, ...userWithoutPassword } = newUser;
       res.json({ 
         user: userWithoutPassword,
         message: "Registration successful" 
       });
     } catch (error: any) {
       console.error("Registration error:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      if (error?.errors) {
-        return res.status(400).json({ error: "Validation failed", details: error.errors });
-      }
-      if (error?.issues) {
-        return res.status(400).json({ error: "Validation failed", details: error.issues });
-      }
       res.status(500).json({ error: error.message || "Registration failed" });
     }
   });

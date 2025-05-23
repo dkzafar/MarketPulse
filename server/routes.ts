@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertWatchlistSchema, loginSchema, registerSchema, updateProfileSchema } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
+import "./types"; // Import session type declarations
 
 // Use Groq for free, ultra-fast AI inference
 const groq = new OpenAI({
@@ -154,9 +155,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: userWithoutPassword,
         message: "Registration successful" 
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Registration error:", error);
-      if (error.errors) {
+      if (error?.errors) {
         return res.status(400).json({ error: "Validation failed", details: error.errors });
       }
       res.status(500).json({ error: "Registration failed" });

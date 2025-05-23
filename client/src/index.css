@@ -1,0 +1,200 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Netflix-inspired dark theme colors */
+  --background: 215 19% 6%; /* #0B0D17 */
+  --foreground: 0 0% 100%; /* #FFFFFF */
+  --muted: 215 15% 15%; /* #1E2128 */
+  --muted-foreground: 0 0% 69%; /* #B0B0B0 */
+  --popover: 215 15% 15%; /* #1E2128 */
+  --popover-foreground: 0 0% 100%; /* #FFFFFF */
+  --card: 215 15% 15%; /* #1E2128 */
+  --card-foreground: 0 0% 100%; /* #FFFFFF */
+  --border: 215 15% 25%; /* #374151 */
+  --input: 215 15% 15%; /* #1E2128 */
+  --primary: 351 100% 46%; /* #E50914 Netflix Red */
+  --primary-foreground: 0 0% 100%; /* #FFFFFF */
+  --secondary: 215 15% 15%; /* #1E2128 */
+  --secondary-foreground: 0 0% 100%; /* #FFFFFF */
+  --accent: 39 100% 56%; /* #FFAD1F Prime Gold */
+  --accent-foreground: 215 19% 6%; /* #0B0D17 */
+  --destructive: 0 84% 60%; /* #FF4444 */
+  --destructive-foreground: 0 0% 98%; /* #FAFAFA */
+  --ring: 351 100% 46%; /* #E50914 */
+  --radius: 0.5rem;
+  
+  /* Chart colors */
+  --chart-1: 351 100% 46%; /* #E50914 Netflix Red */
+  --chart-2: 39 100% 56%; /* #FFAD1F Prime Gold */
+  --chart-3: 142 76% 36%; /* #00C851 Success */
+  --chart-4: 258 90% 66%; /* #7C4DFF Purple */
+  --chart-5: 200 98% 39%; /* #0099CC Blue */
+  
+  /* Success and danger colors */
+  --success: 142 76% 36%; /* #00C851 */
+  --danger: 4 90% 58%; /* #FF4444 */
+  
+  /* Sidebar colors */
+  --sidebar-background: 215 15% 15%; /* #1E2128 */
+  --sidebar-foreground: 0 0% 100%; /* #FFFFFF */
+  --sidebar-primary: 351 100% 46%; /* #E50914 */
+  --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF */
+  --sidebar-accent: 215 15% 25%; /* #374151 */
+  --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
+  --sidebar-border: 215 15% 25%; /* #374151 */
+  --sidebar-ring: 351 100% 46%; /* #E50914 */
+}
+
+.dark {
+  --background: 215 19% 6%; /* #0B0D17 */
+  --foreground: 0 0% 100%; /* #FFFFFF */
+  --muted: 215 15% 15%; /* #1E2128 */
+  --muted-foreground: 0 0% 69%; /* #B0B0B0 */
+  --popover: 215 15% 15%; /* #1E2128 */
+  --popover-foreground: 0 0% 100%; /* #FFFFFF */
+  --card: 215 15% 15%; /* #1E2128 */
+  --card-foreground: 0 0% 100%; /* #FFFFFF */
+  --border: 215 15% 25%; /* #374151 */
+  --input: 215 15% 15%; /* #1E2128 */
+  --primary: 351 100% 46%; /* #E50914 */
+  --primary-foreground: 0 0% 100%; /* #FFFFFF */
+  --secondary: 215 15% 15%; /* #1E2128 */
+  --secondary-foreground: 0 0% 100%; /* #FFFFFF */
+  --accent: 39 100% 56%; /* #FFAD1F */
+  --accent-foreground: 215 19% 6%; /* #0B0D17 */
+  --destructive: 4 90% 58%; /* #FF4444 */
+  --destructive-foreground: 0 0% 98%; /* #FAFAFA */
+  --ring: 351 100% 46%; /* #E50914 */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-montserrat {
+    font-family: 'Montserrat', sans-serif;
+  }
+  
+  .text-success {
+    color: hsl(var(--success));
+  }
+  
+  .text-danger {
+    color: hsl(var(--danger));
+  }
+  
+  .bg-success {
+    background-color: hsl(var(--success));
+  }
+  
+  .bg-danger {
+    background-color: hsl(var(--danger));
+  }
+  
+  .border-success {
+    border-color: hsl(var(--success));
+  }
+  
+  .border-danger {
+    border-color: hsl(var(--danger));
+  }
+}
+
+/* Custom animations */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 5px hsl(var(--primary));
+  }
+  50% {
+    box-shadow: 0 0 20px hsl(var(--primary)), 0 0 30px hsl(var(--primary));
+  }
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.5s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
+
+/* Stock price animation */
+.price-flash-green {
+  animation: flashGreen 0.5s ease-out;
+}
+
+.price-flash-red {
+  animation: flashRed 0.5s ease-out;
+}
+
+@keyframes flashGreen {
+  0% { background-color: transparent; }
+  50% { background-color: hsla(142, 76%, 36%, 0.2); }
+  100% { background-color: transparent; }
+}
+
+@keyframes flashRed {
+  0% { background-color: transparent; }
+  50% { background-color: hsla(4, 90%, 58%, 0.2); }
+  100% { background-color: transparent; }
+}

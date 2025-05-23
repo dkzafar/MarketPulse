@@ -1,0 +1,89 @@
+1. Initial Project Setup
+
+Prompt:
+“Set up a scalable and organised web application project structure suitable for developing a comprehensive financial trading platform. The structure should clearly separate frontend and backend, with dedicated folders for components, pages, data handling, user management, and API integrations.”
+
+⸻
+
+2. User Authentication & Profiles
+
+Prompt:
+“Implement a secure and robust user authentication system that includes user registration, login/logout, password management, email verification, session management, and protected user-specific content. Include user profile capabilities such as profile images, bio, user stats, and recent activities.”
+
+⸻
+
+3. Real-Time Market Data Integration
+
+Prompt:
+“Set up real-time and historical market data retrieval functionality, covering stocks, ETFs, cryptocurrencies, and commodities. Data fetched should include current prices, historical trends, market summaries, and relevant financial metrics. Ensure the method selected is efficient, reliable, and entirely free.”
+
+⸻
+
+4. Interactive and Advanced Financial Charting
+
+Prompt:
+“Embed powerful, interactive financial charts into the application for visualizing historical and real-time market data. Allow users to interactively select different timeframes, indicators, overlays, and comparison symbols. Choose a completely free, robust, and intuitive charting solution.”
+
+⸻
+
+5. Social Trading Functionality
+
+Prompt:
+“Implement social trading capabilities, including user-to-user interactions such as following/unfollowing, viewing trading activity feeds of followed users, and optionally copying trades automatically. Store all associated social trading data securely, efficiently, and for free.”
+
+⸻
+
+6. Trade Execution and Portfolio Management
+
+Prompt:
+“Develop simulated trade execution capabilities, including buying and selling transactions, order management, and detailed transaction logging. Provide clear portfolio overview functionality that displays real-time performance, holdings summaries, profit/loss tracking, and historical transactions.”
+
+⸻
+
+7. AI-Based Investment Recommendations and Market Sentiment Analysis
+
+Prompt:
+“Implement AI-powered investment recommendations based on user portfolio trends, trading behaviour, and current market sentiment analysis from publicly available financial news or market data sources. The solution must be entirely free and robust, clearly indicating its limitations and accuracy levels.”
+
+⸻
+
+8. Educational Resource Integration
+
+Prompt:
+“Create an educational section providing structured, interactive learning materials on financial trading basics, investing strategies, and risk management. The format should be flexible, easily scalable, engaging, and maintainable without cost.”
+
+⸻
+
+9. Real-Time Notifications
+
+Prompt:
+“Build a notification system to deliver real-time alerts for market events, portfolio updates, trade confirmations, and social trading activities. Ensure notifications can be customized by users according to their preferences and operate seamlessly at no cost.”
+
+⸻
+
+10. Application Performance and Optimization
+
+Prompt:
+“Apply best practices to ensure the web app performs smoothly, loads quickly, and handles traffic efficiently. Use effective strategies like caching, lazy-loading, data fetching optimisations, and proper asset management, employing entirely free tools or techniques.”
+
+⸻
+
+11. Neutral and Customisable Frontend
+
+Prompt:
+“Establish a neutral, flexible, and easily customizable frontend styling framework. Clearly structure and document the styling elements so that layout, colours, fonts, and visuals can be easily adapted later by myself. Avoid predefined colour schemes and branding elements.”
+
+⸻
+
+🔥 Summary Checklist (Functionality Only)
+	•	Project setup & clear file structure
+	•	Secure user authentication & profiles
+	•	Real-time/historical market data integration
+	•	Interactive financial charts
+	•	Social trading & follower functionality
+	•	Simulated trade execution & portfolio tracking
+	•	Free AI-driven recommendations & sentiment analysis
+	•	Educational resources section
+	•	Customisable real-time notification system
+	•	Optimised performance & loading speed
+	•	Neutral frontend design for later customisation

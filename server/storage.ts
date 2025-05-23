@@ -12,20 +12,31 @@ import {
   type NewsArticle,
   type InsertNewsArticle
 } from "@shared/schema";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
+  // User management
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, updates: Partial<User>): Promise<User>;
+  updateLastLogin(id: number): Promise<void>;
   
+  // Authentication
+  verifyPassword(email: string, password: string): Promise<User | null>;
+  
+  // Watchlist management
   getWatchlist(userId: number): Promise<Watchlist | undefined>;
   createWatchlist(watchlist: InsertWatchlist & { userId: number }): Promise<Watchlist>;
   updateWatchlist(userId: number, symbols: string[]): Promise<Watchlist>;
   
+  // Stock data
   getStockQuote(symbol: string): Promise<StockQuote | undefined>;
   upsertStockQuote(quote: InsertStockQuote): Promise<StockQuote>;
   getMultipleStockQuotes(symbols: string[]): Promise<StockQuote[]>;
   
+  // News
   getNewsForSymbol(symbol: string, limit?: number): Promise<NewsArticle[]>;
   createNewsArticle(article: InsertNewsArticle): Promise<NewsArticle>;
 }
@@ -61,11 +72,59 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const user: User = { ...insertUser, id };
+    // Hash password before storing
+    const hashedPassword = await bcrypt.hash(insertUser.password, 10);
+    
+    const user: User = { 
+      ...insertUser, 
+      id,
+      password: hashedPassword,
+      profileImage: null,
+      bio: null,
+      isVerified: false,
+      totalTrades: 0,
+      successfulTrades: 0,
+      portfolioValue: 10000,
+      joinedAt: new Date(),
+      lastLogin: null,
+    };
     this.users.set(id, user);
     return user;
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    const user = this.users.get(id);
+    if (!user) {
+      throw new Error("User not found");
+    }
+    
+    const updatedUser = { ...user, ...updates };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async updateLastLogin(id: number): Promise<void> {
+    const user = this.users.get(id);
+    if (user) {
+      user.lastLogin = new Date();
+      this.users.set(id, user);
+    }
+  }
+
+  async verifyPassword(email: string, password: string): Promise<User | null> {
+    const user = await this.getUserByEmail(email);
+    if (!user) return null;
+    
+    const isValid = await bcrypt.compare(password, user.password);
+    return isValid ? user : null;
   }
 
   async getWatchlist(userId: number): Promise<Watchlist | undefined> {

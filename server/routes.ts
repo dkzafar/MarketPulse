@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertWatchlistSchema } from "@shared/schema";
+import { insertWatchlistSchema, loginSchema, registerSchema, updateProfileSchema } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
 
@@ -118,7 +118,141 @@ async function fetchYahooNews(symbol: string) {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
-  // Get watchlist for current user (using user ID 1 for demo)
+  // User Authentication Routes
+  
+  // Register new user
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const userData = registerSchema.parse(req.body);
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(userData.email);
+      if (existingUser) {
+        return res.status(400).json({ error: "User already exists with this email" });
+      }
+      
+      const existingUsername = await storage.getUserByUsername(userData.username);
+      if (existingUsername) {
+        return res.status(400).json({ error: "Username already taken" });
+      }
+      
+      // Create new user (password will be hashed in storage)
+      const newUser = await storage.createUser({
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        firstName: userData.firstName || null,
+        lastName: userData.lastName || null,
+      });
+      
+      // Create session
+      req.session.userId = newUser.id;
+      
+      // Return user data without password
+      const { password, ...userWithoutPassword } = newUser;
+      res.json({ 
+        user: userWithoutPassword,
+        message: "Registration successful" 
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      if (error.errors) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Registration failed" });
+    }
+  });
+
+  // Login user
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+      
+      // Verify user credentials
+      const user = await storage.verifyPassword(email, password);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid email or password" });
+      }
+      
+      // Update last login
+      await storage.updateLastLogin(user.id);
+      
+      // Create session
+      req.session.userId = user.id;
+      
+      // Return user data without password
+      const { password: _, ...userWithoutPassword } = user;
+      res.json({ 
+        user: userWithoutPassword,
+        message: "Login successful" 
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      if (error.errors) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
+  // Logout user
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: "Logout successful" });
+    });
+  });
+
+  // Get current user
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      // Return user data without password
+      const { password, ...userWithoutPassword } = user;
+      res.json({ user: userWithoutPassword });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ error: "Failed to get user data" });
+    }
+  });
+
+  // Update user profile
+  app.put("/api/auth/profile", async (req, res) => {
+    try {
+      if (!req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const updates = updateProfileSchema.parse(req.body);
+      const updatedUser = await storage.updateUser(req.session.userId, updates);
+      
+      // Return user data without password
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json({ 
+        user: userWithoutPassword,
+        message: "Profile updated successfully" 
+      });
+    } catch (error) {
+      console.error("Profile update error:", error);
+      if (error.errors) {
+        return res.status(400).json({ error: "Validation failed", details: error.errors });
+      }
+      res.status(500).json({ error: "Profile update failed" });
+    }
+  });
+
+  // Get watchlist for current user
   app.get("/api/watchlist", async (req, res) => {
     try {
       const watchlist = await storage.getWatchlist(1);

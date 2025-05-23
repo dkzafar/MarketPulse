@@ -86,32 +86,34 @@ export default function MarketsPage() {
       </div>
 
       <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-        <TabsList className="bg-gray-800 border-gray-700 grid grid-cols-2 md:grid-cols-6 w-full">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-red-600">
-            <Globe className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Overview</span>
-          </TabsTrigger>
-          <TabsTrigger value="stocks" className="data-[state=active]:bg-red-600">
-            <BarChart3 className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Stocks</span>
-          </TabsTrigger>
-          <TabsTrigger value="crypto" className="data-[state=active]:bg-red-600">
-            <TrendingUp className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Crypto</span>
-          </TabsTrigger>
-          <TabsTrigger value="forex" className="data-[state=active]:bg-red-600">
-            <Activity className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Forex</span>
-          </TabsTrigger>
-          <TabsTrigger value="commodities" className="data-[state=active]:bg-red-600">
-            <Zap className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Commodities</span>
-          </TabsTrigger>
-          <TabsTrigger value="movers" className="data-[state=active]:bg-red-600">
-            <TrendingUp className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Movers</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="mb-6">
+          <TabsList className="bg-gray-800 border-gray-700 grid grid-cols-2 md:grid-cols-6 w-full p-1">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-red-600 px-2 py-2">
+              <Globe className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="stocks" className="data-[state=active]:bg-red-600 px-2 py-2">
+              <BarChart3 className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Stocks</span>
+            </TabsTrigger>
+            <TabsTrigger value="crypto" className="data-[state=active]:bg-red-600 px-2 py-2">
+              <TrendingUp className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Crypto</span>
+            </TabsTrigger>
+            <TabsTrigger value="forex" className="data-[state=active]:bg-red-600 px-2 py-2">
+              <Activity className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Forex</span>
+            </TabsTrigger>
+            <TabsTrigger value="commodities" className="data-[state=active]:bg-red-600 px-2 py-2">
+              <Zap className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Commodities</span>
+            </TabsTrigger>
+            <TabsTrigger value="movers" className="data-[state=active]:bg-red-600 px-2 py-2">
+              <TrendingUp className="h-4 w-4 mr-1" />
+              <span className="hidden sm:inline">Movers</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -264,24 +266,35 @@ export default function MarketsPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cryptoData.map((crypto: any, index: number) => (
-                  <div key={index} className="bg-gray-800 p-4 rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="text-white font-medium">{crypto.symbol}</h3>
-                        <p className="text-gray-400 text-sm">{crypto.name}</p>
-                      </div>
-                      <Badge 
-                        variant={crypto.changePercent >= 0 ? "default" : "destructive"}
-                        className={crypto.changePercent >= 0 ? "bg-green-600" : "bg-red-600"}
-                      >
-                        {formatPercent(crypto.changePercent)}
-                      </Badge>
-                    </div>
-                    <p className="text-white text-lg font-bold">${crypto.price?.toFixed(4) || 'N/A'}</p>
-                    <p className="text-gray-400 text-xs">Vol: ${(crypto.volume / 1000000).toFixed(1)}M</p>
+                {marketLoading ? (
+                  <div className="col-span-full text-center py-8">
+                    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-red-500 border-t-transparent"></div>
+                    <p className="text-gray-400 mt-2">Loading crypto data...</p>
                   </div>
-                ))}
+                ) : cryptoData.length > 0 ? (
+                  cryptoData.map((crypto: any, index: number) => (
+                    <div key={index} className="bg-gray-800 p-4 rounded-lg hover:bg-gray-750 transition-colors">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-white font-medium">{crypto.symbol}</h3>
+                          <p className="text-gray-400 text-sm">{crypto.name}</p>
+                        </div>
+                        <Badge 
+                          variant={crypto.changePercent >= 0 ? "default" : "destructive"}
+                          className={crypto.changePercent >= 0 ? "bg-green-600" : "bg-red-600"}
+                        >
+                          {formatPercent(crypto.changePercent)}
+                        </Badge>
+                      </div>
+                      <p className="text-white text-lg font-bold">${crypto.price?.toFixed(4) || 'N/A'}</p>
+                      <p className="text-gray-400 text-xs">Vol: ${(crypto.volume / 1000000).toFixed(1)}M</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-8">
+                    <p className="text-gray-400">Loading live cryptocurrency data...</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

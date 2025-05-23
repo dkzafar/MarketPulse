@@ -142,8 +142,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         username: userData.username,
         email: userData.email,
         password: userData.password,
-        firstName: userData.firstName || null,
-        lastName: userData.lastName || null,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
       });
       
       // Create session

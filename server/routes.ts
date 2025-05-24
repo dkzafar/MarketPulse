@@ -18,6 +18,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Fetch real stock data from Finnhub (real-time quotes)
       if (finnhubKey) {
+        console.log('🔄 Fetching live stock data from Finnhub...');
         const stockSymbols = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX'];
         
         for (const symbol of stockSymbols) {
@@ -28,6 +29,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             if (quoteResponse.ok) {
               const quoteData = await quoteResponse.json();
+              console.log(`Finnhub data for ${symbol}:`, quoteData);
               
               if (quoteData.c) { // Current price exists
                 results.push({
@@ -40,17 +42,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   marketCap: calculateMarketCap(symbol, quoteData.c),
                   category: 'traditional'
                 });
+                console.log(`✓ Added live ${symbol} data: $${quoteData.c}`);
               }
             }
             
             // Small delay to respect API rate limits
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, 100));
           } catch (error) {
             console.log(`Error fetching ${symbol} from Finnhub:`, error);
           }
         }
         
-        console.log(`✓ Fetched live stock data from Finnhub`);
+        console.log(`✓ Fetched ${results.filter(r => r.category === 'traditional').length} live stocks from Finnhub`);
+      } else {
+        console.log('❌ No Finnhub API key available');
       }
       
       // Fetch forex data from Alpha Vantage as backup
@@ -89,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch real crypto data from CoinGecko (completely free)
       try {
         const cryptoResponse = await fetch(
-          'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=10&page=1',
+          'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=8&page=1',
           { headers: { 'User-Agent': 'StockVue/1.0' } }
         );
         
@@ -111,21 +116,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.log('CoinGecko temporarily unavailable');
       }
-      
-      // Add additional market data for comprehensive coverage
-      const additionalAssets = [
-        // Major Indices
-        { symbol: '^GSPC', name: 'S&P 500', price: 4789.30, change: 56.20, changePercent: 1.19, volume: 125000000, category: 'indices' },
-        { symbol: '^DJI', name: 'Dow Jones', price: 37923.45, change: 112.30, changePercent: 0.30, volume: 98000000, category: 'indices' },
-        { symbol: '^IXIC', name: 'NASDAQ', price: 14698.75, change: 178.45, changePercent: 1.23, volume: 156000000, category: 'indices' },
-        
-        // Commodities
-        { symbol: 'GC=F', name: 'Gold Futures', price: 2041.80, change: 19.50, changePercent: 0.96, volume: 12000000, category: 'commodities' },
-        { symbol: 'CL=F', name: 'Crude Oil WTI', price: 79.45, change: 3.22, changePercent: 4.22, volume: 85000000, category: 'commodities' },
-        { symbol: 'SI=F', name: 'Silver Futures', price: 23.45, change: 0.78, changePercent: 3.33, volume: 8000000, category: 'commodities' }
-      ];
-      
-      results.push(...additionalAssets);
       
       console.log(`✓ Total live market data: ${results.length} assets`);
       res.setHeader('Content-Type', 'application/json');

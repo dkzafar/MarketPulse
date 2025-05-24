@@ -285,7 +285,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email, password } = loginSchema.parse(req.body);
+      console.log('🔐 Login attempt:', req.body);
+      
+      // Bypass schema validation for demo account
+      const { email, password } = req.body;
       
       // Quick demo access for test@example.com
       if (email === 'test@example.com' && password === 'password123') {
@@ -298,6 +301,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.userId = 1;
         console.log('✓ Demo user logged in successfully');
         return res.json({ user: demoUser });
+      }
+      
+      // For other users, validate with schema
+      const validationResult = loginSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        console.log('Schema validation failed:', validationResult.error);
+        return res.status(400).json({ error: "Invalid input format" });
       }
       
       const user = await storage.verifyPassword(email, password);

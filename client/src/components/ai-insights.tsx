@@ -27,30 +27,21 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
   const currentQuote = quotes?.[0];
 
   const { data: aiInsights, isLoading, error } = useQuery<AIInsightsResponse>({
-    queryKey: ["/api/ai/insights", symbol],
+    queryKey: ["/api/ai-market-analysis", symbol],
     enabled: !!currentQuote,
     staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
-      const response = await fetch("/api/ai/insights", {
+      const response = await fetch("/api/ai-market-analysis", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           symbol,
-          quoteData: {
-            price: currentQuote?.price || 0,
-            changePercent: currentQuote?.changePercent || 0,
-            volume: currentQuote?.volume || 0,
-            marketCap: currentQuote?.marketCap || 0
-          },
-          indicators: {
-            rsi: Math.round(30 + Math.random() * 40),
-            macd: currentQuote?.changePercent > 0 ? "bullish" : "bearish",
-            volatility: Math.abs(currentQuote?.changePercent || 0),
-            support: (currentQuote?.price || 0) * 0.95,
-            resistance: (currentQuote?.price || 0) * 1.05,
-          },
+          price: currentQuote?.price || 0,
+          changePercent: currentQuote?.changePercent || 0,
+          volume: currentQuote?.volume || 0,
+          marketCap: currentQuote?.marketCap || 0
         }),
       });
 
@@ -58,7 +49,36 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
         throw new Error("Failed to fetch AI insights");
       }
 
-      return response.json();
+      const result = await response.json();
+      
+      // Transform the response to match the expected format
+      return {
+        insights: [
+          {
+            type: "trading_signal",
+            title: `${result.analysis.tradingRecommendation} Recommendation`,
+            description: `${result.analysis.tradingRecommendation} signal with ${Math.round(result.analysis.confidence * 100)}% confidence. Expected return: ${result.analysis.expectedReturn > 0 ? '+' : ''}${result.analysis.expectedReturn}%.`,
+            sentiment: result.analysis.sentiment,
+            confidence: result.analysis.confidence,
+            trading_action: result.analysis.tradingRecommendation,
+            expected_return: result.analysis.expectedReturn
+          },
+          {
+            type: "technical",
+            title: "Technical Analysis",
+            description: `RSI: ${result.analysis.technicalIndicators?.rsi} (${result.analysis.technicalIndicators?.rsiSignal}). Momentum: ${result.analysis.technicalIndicators?.momentum}. Volatility: ${result.analysis.technicalIndicators?.volatility}.`,
+            sentiment: result.analysis.sentiment,
+            confidence: result.analysis.confidence
+          },
+          {
+            type: "risk_assessment",
+            title: "Risk & Position Sizing",
+            description: `Risk Level: ${result.analysis.riskLevel?.toUpperCase()}. Recommended position size: ${result.analysis.positionSize} of portfolio.`,
+            sentiment: "neutral",
+            confidence: 0.85
+          }
+        ]
+      };
     },
   });
 

@@ -44,6 +44,9 @@ function Router() {
           <Route path="/markets">
             <ProtectedRoute component={Markets} />
           </Route>
+          <Route path="/markets-new">
+            <ProtectedRoute component={Markets} />
+          </Route>
           <Route path="/">
             <ProtectedRoute component={Dashboard} />
           </Route>

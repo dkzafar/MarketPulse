@@ -36,47 +36,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'TSM', 'ASML', 'SAP', 'NVO', 'TM', 'SONY', 'NTT', 'BABA', 'PDD', 'BIDU'
         ];
         
-        // Process stocks sequentially for reliable data
-        for (const symbol of stockSymbols) {
-          try {
-            const quoteResponse = await fetch(
-              `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`
-            );
-            
-            if (quoteResponse.ok) {
-              const quoteData = await quoteResponse.json();
-              console.log(`Finnhub data for ${symbol}:`, quoteData);
+        // Process priority stocks first for immediate display, then continue with full list
+        const priorityStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX'];
+        const allOtherStocks = stockSymbols.filter(s => !priorityStocks.includes(s));
+        const processOrder = [...priorityStocks, ...allOtherStocks];
+        
+        // Process all stocks in smaller batches
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < processOrder.length; i += BATCH_SIZE) {
+          const batch = processOrder.slice(i, i + BATCH_SIZE);
+          
+          const batchPromises = batch.map(async (symbol) => {
+            try {
+              const quoteResponse = await fetch(
+                `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`
+              );
               
-              if (quoteData.c && quoteData.c > 0) { // Valid price data
-                results.push({
-                  symbol: symbol,
-                  name: getCompanyName(symbol),
-                  price: quoteData.c,
-                  change: quoteData.d || 0,
-                  changePercent: quoteData.dp || 0,
-                  volume: quoteData.v || Math.floor(Math.random() * 100000000) + 10000000,
-                  marketCap: calculateMarketCap(symbol, quoteData.c),
-                  category: 'traditional',
-                  // Real technical indicators based on actual data
-                  rsi: Math.round(30 + Math.random() * 40),
-                  macd: quoteData.dp > 0 ? 'bullish' : 'bearish',
-                  volatility: Math.abs(quoteData.dp || 0),
-                  support: quoteData.c * 0.97,
-                  resistance: quoteData.c * 1.03,
-                  peRatio: Math.round(15 + Math.random() * 25),
-                  dividendYield: Math.round((Math.random() * 4 + 1) * 100) / 100,
-                  high24h: quoteData.h || quoteData.c * 1.02,
-                  low24h: quoteData.l || quoteData.c * 0.98,
-                  previousClose: quoteData.pc || quoteData.c
-                });
-                console.log(`✓ Added live ${symbol} data: $${quoteData.c}`);
+              if (quoteResponse.ok) {
+                const quoteData = await quoteResponse.json();
+                
+                if (quoteData.c && quoteData.c > 0) {
+                  return {
+                    symbol: symbol,
+                    name: getCompanyName(symbol),
+                    price: quoteData.c,
+                    change: quoteData.d || 0,
+                    changePercent: quoteData.dp || 0,
+                    volume: quoteData.v || Math.floor(Math.random() * 100000000) + 10000000,
+                    marketCap: calculateMarketCap(symbol, quoteData.c),
+                    category: 'traditional',
+                    rsi: Math.round(30 + Math.random() * 40),
+                    macd: quoteData.dp > 0 ? 'bullish' : 'bearish',
+                    volatility: Math.abs(quoteData.dp || 0),
+                    support: quoteData.c * 0.97,
+                    resistance: quoteData.c * 1.03,
+                    peRatio: Math.round(15 + Math.random() * 25),
+                    dividendYield: Math.round((Math.random() * 4 + 1) * 100) / 100,
+                    high24h: quoteData.h || quoteData.c * 1.02,
+                    low24h: quoteData.l || quoteData.c * 0.98,
+                    previousClose: quoteData.pc || quoteData.c
+                  };
+                }
               }
+            } catch (error) {
+              console.log(`Error fetching ${symbol}:`, error);
             }
-            
-            // Small delay to respect API rate limits
-            await new Promise(resolve => setTimeout(resolve, 60));
-          } catch (error) {
-            console.log(`Error fetching ${symbol} from Finnhub:`, error);
+            return null;
+          });
+          
+          const batchResults = await Promise.all(batchPromises);
+          const validResults = batchResults.filter(result => result !== null);
+          results.push(...validResults);
+          
+          console.log(`✓ Batch ${Math.floor(i/BATCH_SIZE) + 1}: ${validResults.length}/${batch.length} stocks processed`);
+          
+          // Small delay only between batches to respect rate limits
+          if (i + BATCH_SIZE < processOrder.length) {
+            await new Promise(resolve => setTimeout(resolve, 50));
           }
         }
         

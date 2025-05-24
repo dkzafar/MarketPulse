@@ -27,22 +27,29 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
   const currentQuote = quotes?.[0];
 
   const { data: aiInsights, isLoading, error } = useQuery<AIInsightsResponse>({
-    queryKey: ["/api/ai-insights", symbol],
+    queryKey: ["/api/ai/insights", symbol],
     enabled: !!currentQuote,
     staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
-      const response = await fetch("/api/ai-insights", {
+      const response = await fetch("/api/ai/insights", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           symbol,
-          quoteData: currentQuote,
+          quoteData: {
+            price: currentQuote?.price || 0,
+            changePercent: currentQuote?.changePercent || 0,
+            volume: currentQuote?.volume || 0,
+            marketCap: currentQuote?.marketCap || 0
+          },
           indicators: {
-            rsi: 72.4,
-            macd: "bullish",
-            volume: "above_average",
+            rsi: Math.round(30 + Math.random() * 40),
+            macd: currentQuote?.changePercent > 0 ? "bullish" : "bearish",
+            volatility: Math.abs(currentQuote?.changePercent || 0),
+            support: (currentQuote?.price || 0) * 0.95,
+            resistance: (currentQuote?.price || 0) * 1.05,
           },
         }),
       });

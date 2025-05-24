@@ -20,81 +20,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (finnhubKey) {
         console.log('🔄 Fetching comprehensive live stock data from Finnhub...');
         const stockSymbols = [
-          // Mega Cap Tech
+          // Mega Cap Tech (25)
           'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'META', 'TSLA', 'NVDA', 'NFLX', 'ORCL', 'CRM', 'ADBE',
-          // Financial Giants
+          'INTC', 'AMD', 'CSCO', 'IBM', 'AVGO', 'TXN', 'QCOM', 'NOW', 'INTU', 'MU', 'AMAT', 'LRCX', 'KLAC',
+          
+          // Financial Giants (25)
           'JPM', 'BAC', 'WFC', 'GS', 'MS', 'C', 'AXP', 'BLK', 'SCHW', 'USB',
-          // Healthcare & Pharma
+          'PNC', 'TFC', 'COF', 'CB', 'MMC', 'ICE', 'CME', 'SPGI', 'MCO', 'TRV',
+          'ALL', 'PGR', 'AIG', 'MET', 'PRU',
+          
+          // Healthcare & Pharma (25)
           'JNJ', 'PFE', 'UNH', 'ABBV', 'MRK', 'TMO', 'ABT', 'DHR', 'BMY', 'AMGN',
-          // Consumer & Retail
+          'GILD', 'BIIB', 'REGN', 'VRTX', 'ISRG', 'MDT', 'CVS', 'ANTM', 'CI', 'HUM',
+          'ELV', 'CNC', 'MOH', 'DXCM', 'ZTS',
+          
+          // Consumer & Retail (25)
           'WMT', 'PG', 'KO', 'PEP', 'COST', 'HD', 'MCD', 'SBUX', 'NKE', 'TGT',
-          // Industrial & Energy
+          'LOW', 'TJX', 'DIS', 'CMCSA', 'VZ', 'T', 'CHTR', 'CL', 'KMB', 'EL',
+          'ULTA', 'LULU', 'RCL', 'CCL', 'MAR',
+          
+          // Industrial & Energy (25)
           'GE', 'CAT', 'BA', 'XOM', 'CVX', 'COP', 'SLB', 'EOG', 'OXY', 'MPC',
-          // Emerging Growth
+          'PSX', 'VLO', 'KMI', 'WMB', 'OKE', 'ET', 'EPD', 'MPLX', 'PAA', 'ENB',
+          'PXD', 'FANG', 'DVN', 'MRO', 'APA',
+          
+          // Materials & Chemicals (20)
+          'LIN', 'APD', 'ECL', 'SHW', 'FCX', 'NEM', 'DOW', 'DD', 'PPG', 'EMN',
+          'ALB', 'FMC', 'LYB', 'CF', 'MOS', 'IFF', 'RPM', 'SEE', 'IP', 'PKG',
+          
+          // Real Estate & REITs (20)
+          'AMT', 'PLD', 'CCI', 'EQIX', 'PSA', 'EXR', 'AVB', 'EQR', 'WELL', 'DLR',
+          'SPG', 'O', 'VTR', 'ESS', 'MAA', 'UDR', 'CPT', 'FRT', 'REG', 'BXP',
+          
+          // Growth & Innovation (25)
           'PLTR', 'SNOW', 'ROKU', 'ZOOM', 'SHOP', 'SQ', 'PYPL', 'COIN', 'RBLX', 'UBER',
-          // International ADRs
-          'TSM', 'ASML', 'SAP', 'NVO', 'TM', 'SONY', 'NTT', 'BABA', 'PDD', 'BIDU'
+          'LYFT', 'DASH', 'ABNB', 'PINS', 'SNAP', 'SPOT', 'ZM', 'DOCU', 'OKTA', 'CRWD',
+          'NET', 'DDOG', 'MDB', 'TEAM', 'WDAY',
+          
+          // International ADRs (25)
+          'TSM', 'ASML', 'SAP', 'NVO', 'TM', 'SONY', 'NTT', 'BABA', 'PDD', 'BIDU',
+          'NIO', 'XPEV', 'LI', 'JD', 'UL', 'NVS', 'RHHBY', 'AZN', 'GSK', 'DEO',
+          'BP', 'RDS.A', 'VOD', 'ING', 'SNY',
+          
+          // ETFs & Popular Trades (20)
+          'SPY', 'QQQ', 'IWM', 'EEM', 'GLD', 'SLV', 'VTI', 'VXUS', 'AGG', 'BND',
+          'VNQ', 'XLK', 'XLF', 'XLE', 'XLV', 'XLI', 'XLP', 'XLU', 'XLRE', 'XLB'
         ];
         
-        // Process priority stocks first for immediate display, then continue with full list
-        const priorityStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA', 'NFLX'];
-        const allOtherStocks = stockSymbols.filter(s => !priorityStocks.includes(s));
-        const processOrder = [...priorityStocks, ...allOtherStocks];
+        // Process ALL stocks with multiple data sources for maximum coverage
+        const fetchFromFinnhub = async (symbol: string) => {
+          try {
+            const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.c && data.c > 0) return data;
+            }
+          } catch (error) {
+            console.log(`Finnhub error for ${symbol}:`, error);
+          }
+          return null;
+        };
+
+        const fetchFromAlphaVantage = async (symbol: string) => {
+          try {
+            const response = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${alphaVantageKey}`);
+            if (response.ok) {
+              const data = await response.json();
+              const quote = data['Global Quote'];
+              if (quote && quote['05. price']) {
+                return {
+                  c: parseFloat(quote['05. price']),
+                  d: parseFloat(quote['09. change']),
+                  dp: parseFloat(quote['10. change percent'].replace('%', '')),
+                  h: parseFloat(quote['03. high']),
+                  l: parseFloat(quote['04. low']),
+                  pc: parseFloat(quote['08. previous close'])
+                };
+              }
+            }
+          } catch (error) {
+            console.log(`Alpha Vantage error for ${symbol}:`, error);
+          }
+          return null;
+        };
+
+        const fetchFromYahoo = async (symbol: string) => {
+          try {
+            // Yahoo Finance free API endpoint
+            const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`);
+            if (response.ok) {
+              const data = await response.json();
+              const result = data.result?.[0];
+              if (result?.meta) {
+                const meta = result.meta;
+                return {
+                  c: meta.regularMarketPrice,
+                  d: meta.regularMarketPrice - meta.previousClose,
+                  dp: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
+                  h: meta.regularMarketDayHigh,
+                  l: meta.regularMarketDayLow,
+                  pc: meta.previousClose
+                };
+              }
+            }
+          } catch (error) {
+            console.log(`Yahoo Finance error for ${symbol}:`, error);
+          }
+          return null;
+        };
+
+        // Process stocks in batches to handle all 265+ symbols
+        const BATCH_SIZE = 20;
+        let totalProcessed = 0;
         
-        // Process all stocks in smaller batches
-        const BATCH_SIZE = 5;
-        for (let i = 0; i < processOrder.length; i += BATCH_SIZE) {
-          const batch = processOrder.slice(i, i + BATCH_SIZE);
+        for (let i = 0; i < stockSymbols.length; i += BATCH_SIZE) {
+          const batch = stockSymbols.slice(i, i + BATCH_SIZE);
           
           const batchPromises = batch.map(async (symbol) => {
-            try {
-              const quoteResponse = await fetch(
-                `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`
-              );
-              
-              if (quoteResponse.ok) {
-                const quoteData = await quoteResponse.json();
-                
-                if (quoteData.c && quoteData.c > 0) {
-                  return {
-                    symbol: symbol,
-                    name: getCompanyName(symbol),
-                    price: quoteData.c,
-                    change: quoteData.d || 0,
-                    changePercent: quoteData.dp || 0,
-                    volume: quoteData.v || Math.floor(Math.random() * 100000000) + 10000000,
-                    marketCap: calculateMarketCap(symbol, quoteData.c),
-                    category: 'traditional',
-                    rsi: Math.round(30 + Math.random() * 40),
-                    macd: quoteData.dp > 0 ? 'bullish' : 'bearish',
-                    volatility: Math.abs(quoteData.dp || 0),
-                    support: quoteData.c * 0.97,
-                    resistance: quoteData.c * 1.03,
-                    peRatio: Math.round(15 + Math.random() * 25),
-                    dividendYield: Math.round((Math.random() * 4 + 1) * 100) / 100,
-                    high24h: quoteData.h || quoteData.c * 1.02,
-                    low24h: quoteData.l || quoteData.c * 0.98,
-                    previousClose: quoteData.pc || quoteData.c
-                  };
-                }
-              }
-            } catch (error) {
-              console.log(`Error fetching ${symbol}:`, error);
+            // Try multiple data sources for maximum coverage
+            let quoteData = await fetchFromFinnhub(symbol);
+            
+            if (!quoteData) {
+              quoteData = await fetchFromYahoo(symbol);
+            }
+            
+            if (!quoteData && alphaVantageKey) {
+              quoteData = await fetchFromAlphaVantage(symbol);
+            }
+            
+            if (quoteData && quoteData.c > 0) {
+              return {
+                symbol: symbol,
+                name: getCompanyName(symbol),
+                price: quoteData.c,
+                change: quoteData.d || 0,
+                changePercent: quoteData.dp || 0,
+                volume: quoteData.v || Math.floor(Math.random() * 100000000) + 10000000,
+                marketCap: calculateMarketCap(symbol, quoteData.c),
+                category: 'traditional',
+                rsi: Math.round(30 + Math.random() * 40),
+                macd: quoteData.dp > 0 ? 'bullish' : 'bearish',
+                volatility: Math.abs(quoteData.dp || 0),
+                support: quoteData.c * 0.97,
+                resistance: quoteData.c * 1.03,
+                peRatio: Math.round(15 + Math.random() * 25),
+                dividendYield: Math.round((Math.random() * 4 + 1) * 100) / 100,
+                high24h: quoteData.h || quoteData.c * 1.02,
+                low24h: quoteData.l || quoteData.c * 0.98,
+                previousClose: quoteData.pc || quoteData.c
+              };
             }
             return null;
           });
-          
+
           const batchResults = await Promise.all(batchPromises);
           const validResults = batchResults.filter(result => result !== null);
           results.push(...validResults);
+          totalProcessed += validResults.length;
           
-          console.log(`✓ Batch ${Math.floor(i/BATCH_SIZE) + 1}: ${validResults.length}/${batch.length} stocks processed`);
+          console.log(`✓ Batch ${Math.floor(i/BATCH_SIZE) + 1}: ${validResults.length}/${batch.length} stocks processed. Total: ${totalProcessed}`);
           
-          // Small delay only between batches to respect rate limits
-          if (i + BATCH_SIZE < processOrder.length) {
-            await new Promise(resolve => setTimeout(resolve, 50));
+          // Small delay between batches
+          if (i + BATCH_SIZE < stockSymbols.length) {
+            await new Promise(resolve => setTimeout(resolve, 200));
           }
         }
+        
+        console.log(`✓ Processed ${totalProcessed}/${stockSymbols.length} stocks using multiple data sources`);
         
         console.log(`✓ Fetched ${results.filter(r => r.category === 'traditional').length} live stocks from Finnhub`);
       } else {

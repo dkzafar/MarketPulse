@@ -139,8 +139,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const YAHOO_BATCH_SIZE = 25;
       let yahooCount = 0;
       
-      // Process in parallel batches for speed
-      for (let i = 0; i < Math.min(150, allSymbols.length); i += YAHOO_BATCH_SIZE) {
+      // Process in parallel batches for speed - EXPANDED COVERAGE
+      for (let i = 0; i < Math.min(300, allSymbols.length); i += YAHOO_BATCH_SIZE) {
         const batch = allSymbols.slice(i, i + YAHOO_BATCH_SIZE);
         
         const batchPromises = batch.map(async (symbol) => {
@@ -185,7 +185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (alphaVantageKey) {
         console.log("🔄 Alpha Vantage API - Premium stock data...");
         let alphaCount = 0;
-        for (let i = 0; i < Math.min(50, allStockSymbols.length); i++) {
+        for (let i = 0; i < Math.min(100, allStockSymbols.length); i++) {
           const symbol = allStockSymbols[i];
           if (!allAssets.find(a => a.symbol === symbol)) {
             try {
@@ -221,7 +221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (twelveDataKey) {
         console.log("🔄 Twelve Data API - Additional coverage...");
         let twelveCount = 0;
-        for (let i = 0; i < Math.min(50, allStockSymbols.length); i++) {
+        for (let i = 0; i < Math.min(100, allStockSymbols.length); i++) {
           const symbol = allStockSymbols[i];
           if (!allAssets.find(a => a.symbol === symbol)) {
             try {
@@ -256,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (finnhubKey) {
         console.log("🔄 Finnhub API - Professional market data...");
         let finnhubCount = 0;
-        for (let i = 0; i < Math.min(60, allStockSymbols.length); i++) {
+        for (let i = 0; i < Math.min(120, allStockSymbols.length); i++) {
           const symbol = allStockSymbols[i];
           if (!allAssets.find(a => a.symbol === symbol)) {
             try {
@@ -286,13 +286,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         apiStats['Finnhub'] = finnhubCount;
       }
 
-      // CoinGecko - Complete crypto universe
+      // CoinGecko - Complete crypto universe with multiple pages
       console.log("🔄 CoinGecko API - Complete cryptocurrency universe...");
       try {
-        const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false');
-        if (response.ok) {
-          const cryptoData = await response.json();
-          cryptoData.forEach((coin: any) => {
+        // Fetch multiple pages for maximum crypto coverage
+        const cryptoPromises = [1, 2].map(async (page) => {
+          try {
+            const response = await fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${page}&sparkline=false`);
+            if (response.ok) {
+              return await response.json();
+            }
+          } catch (error) {
+            return [];
+          }
+          return [];
+        });
+
+        const cryptoResults = await Promise.all(cryptoPromises);
+        const allCryptoData = cryptoResults.flat();
+        
+        allCryptoData.forEach((coin: any) => {
+          if (coin && coin.symbol) {
             allAssets.push({
               symbol: coin.symbol.toUpperCase(),
               name: coin.name,
@@ -304,9 +318,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               category: 'crypto',
               source: 'CoinGecko'
             });
-          });
-          apiStats['CoinGecko'] = cryptoData.length;
-        }
+          }
+        });
+        apiStats['CoinGecko'] = allCryptoData.length;
       } catch (error) {
         console.log("CoinGecko temporary issue");
       }

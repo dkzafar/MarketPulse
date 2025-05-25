@@ -148,6 +148,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
               quoteData = await fetchFromAlphaVantage(symbol);
             }
             
+            // Add more backup sources for comprehensive coverage
+            if (!quoteData) {
+              try {
+                // IEX Cloud free tier as backup
+                const iexResponse = await fetch(`https://api.iex.cloud/v1/data/core/quote/${symbol}?token=demo`);
+                if (iexResponse.ok) {
+                  const iexData = await iexResponse.json();
+                  if (iexData[0]) {
+                    quoteData = {
+                      c: iexData[0].latestPrice,
+                      d: iexData[0].change,
+                      dp: iexData[0].changePercent * 100,
+                      h: iexData[0].high,
+                      l: iexData[0].low,
+                      pc: iexData[0].previousClose
+                    };
+                  }
+                }
+              } catch (e) {
+                console.log(`IEX backup failed for ${symbol}`);
+              }
+            }
+            
             if (quoteData && quoteData.c > 0) {
               return {
                 symbol: symbol,

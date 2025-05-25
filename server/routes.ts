@@ -748,14 +748,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // AI market analysis endpoint with ALL free AI APIs (matches frontend call)
+  // AI market analysis endpoint with professional-grade calculations
   app.post("/api/ai-market-analysis", async (req: Request, res: Response) => {
     try {
       const { symbol, price, changePercent, volume, marketCap } = req.body;
       
-      // Try ALL available free AI APIs for comprehensive analysis
-      let aiProvider = "Advanced Analysis";
+      console.log(`🔬 Starting professional analysis for ${symbol}...`);
+      
+      // Import the professional analysis engine
+      const { professionalAnalysisEngine } = await import("./professional-analysis-engine");
+      
+      // Get current market data
+      const currentAsset = { symbol, price, changePercent, volume, marketCap, category: 'stocks' };
+      
+      // Fetch historical data from free sources
+      console.log(`📊 Fetching historical data for ${symbol}...`);
+      const historicalPrices = await professionalAnalysisEngine.getHistoricalData(symbol, currentAsset.category);
+      
       let analysis = null;
+      
+      if (historicalPrices.length > 14) {
+        console.log(`✅ Using ${historicalPrices.length} data points for authentic calculations`);
+        
+        // Calculate authentic technical indicators
+        const rsi = professionalAnalysisEngine.calculateRSI(historicalPrices, 14);
+        const sma20 = professionalAnalysisEngine.calculateSMA(historicalPrices, 20);
+        const sma50 = professionalAnalysisEngine.calculateSMA(historicalPrices, 50);
+        const macd = professionalAnalysisEngine.calculateMACD(historicalPrices);
+        const bollingerBands = professionalAnalysisEngine.calculateBollingerBands(historicalPrices, 20);
+        const supportResistance = professionalAnalysisEngine.calculateSupportResistance(historicalPrices, currentAsset.price);
+        const volatility = professionalAnalysisEngine.calculateHistoricalVolatility(historicalPrices, 30);
+        const var95 = professionalAnalysisEngine.calculateVaR(historicalPrices, 0.95);
+        
+        // Comprehensive analysis object
+        const technicalAnalysis = {
+          rsi,
+          sma20,
+          sma50,
+          macd: macd.macd,
+          signal: macd.signal,
+          histogram: macd.histogram,
+          bollingerBands,
+          support: supportResistance.support,
+          resistance: supportResistance.resistance,
+          pivot: supportResistance.pivot,
+          volatility,
+          var95,
+          currentPrice: currentAsset.price
+        };
+        
+        // Generate professional recommendation
+        const recommendation = professionalAnalysisEngine.generateProfessionalRecommendation(technicalAnalysis);
+        
+        // Calculate price target based on technical levels
+        const priceTarget = technicalAnalysis.currentPrice > technicalAnalysis.sma20 ? 
+          technicalAnalysis.resistance : 
+          (technicalAnalysis.support + technicalAnalysis.currentPrice) / 2;
+        
+        analysis = {
+          recommendation: recommendation.recommendation,
+          confidence: recommendation.confidence,
+          sentiment: technicalAnalysis.currentPrice > technicalAnalysis.sma20 ? 'bullish' : 'bearish',
+          priceTarget: priceTarget,
+          riskLevel: volatility > 0.4 ? 'high' : volatility > 0.2 ? 'medium' : 'low',
+          analysis: `Professional ${recommendation.recommendation} recommendation based on ${historicalPrices.length}-day technical analysis. ${recommendation.technicalSummary}`,
+          keyFactors: recommendation.factors.slice(0, 4),
+          technicalDetails: {
+            rsi: rsi.toFixed(1),
+            sma20: sma20.toFixed(2),
+            sma50: sma50.toFixed(2),
+            support: supportResistance.support.toFixed(2),
+            resistance: supportResistance.resistance.toFixed(2),
+            volatility: (volatility * 100).toFixed(1),
+            var95: var95.toFixed(2),
+            macd: macd.macd.toFixed(3),
+            bollingerUpper: bollingerBands.upper.toFixed(2),
+            bollingerLower: bollingerBands.lower.toFixed(2)
+          }
+        };
+        
+        console.log(`✅ Professional analysis complete for ${symbol}: ${analysis.recommendation} (${Math.round(analysis.confidence * 100)}%)`);
+      } else {
+        console.log(`⚠️ Limited historical data for ${symbol}, using enhanced fallback analysis`);
+        
+        // Enhanced fallback with available data
+        analysis = {
+          recommendation: changePercent > 2 ? 'BUY' : changePercent < -2 ? 'SELL' : 'HOLD',
+          confidence: 0.65,
+          sentiment: changePercent > 0 ? 'bullish' : 'bearish',
+          priceTarget: price * (1 + (changePercent > 0 ? 0.05 : -0.03)),
+          riskLevel: currentAsset.category === 'crypto' ? 'high' : volume > 1000000 ? 'medium' : 'low',
+          analysis: `Analysis based on current market data. Limited historical data available for comprehensive technical analysis.`,
+          keyFactors: [
+            `Current momentum: ${changePercent > 0 ? 'Positive' : 'Negative'} (${changePercent.toFixed(1)}%)`,
+            `Volume: ${volume > 1000000 ? 'Above average' : 'Normal'} trading activity`,
+            `Risk profile: ${currentAsset.category === 'crypto' ? 'High volatility asset' : 'Standard risk profile'}`,
+            `Price level: ${price > 100 ? 'High-value' : price > 10 ? 'Mid-range' : 'Low-priced'} asset`
+          ]
+        };
+      }
+      
+      // Try to enhance with AI analysis if keys available
+      let aiProvider = "Professional Technical Analysis";
       
       // 1. Try Groq (Fastest free AI)
       if (process.env.GROQ_API_KEY && !analysis) {
@@ -1038,6 +1132,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Helper functions for stock data
+  // Helper function to get current asset data
+  async function getCurrentAssetData(symbol: string) {
+    try {
+      // Get data from our market data cache
+      const marketDataUrl = `http://localhost:${process.env.PORT || 5000}/api/market-data`;
+      const response = await fetch(marketDataUrl);
+      if (response.ok) {
+        const allAssets = await response.json();
+        const asset = allAssets.find((asset: any) => 
+          asset.symbol.toUpperCase() === symbol.toUpperCase()
+        );
+        return asset;
+      }
+    } catch (error) {
+      console.log(`Error fetching asset data for ${symbol}:`, error);
+    }
+    return null;
+  }
+
   function getCompanyName(symbol: string): string {
     const names: { [key: string]: string } = {
       // Mega Cap Tech

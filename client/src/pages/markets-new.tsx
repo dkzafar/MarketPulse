@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,7 @@ import { TrendingUp, TrendingDown, Activity, BarChart3, Globe, Zap, Filter, Slid
 import { apiRequest } from "@/lib/queryClient";
 
 export default function MarketsPage() {
+  const [, setLocation] = useLocation();
   const [selectedAssetClass, setSelectedAssetClass] = useState("all");
   const [sortBy, setSortBy] = useState("marketCap");
   const [filterBy, setFilterBy] = useState("all");
@@ -293,7 +295,11 @@ export default function MarketsPage() {
         ) : filteredData.length > 0 ? (
           // Market Data Cards
           filteredData.map((asset: any, index: number) => (
-            <Card key={index} className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-all duration-200 hover:border-red-500 cursor-pointer">
+            <Card 
+              key={index} 
+              className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-all duration-200 hover:border-red-500 cursor-pointer"
+              onClick={() => setLocation(`/analysis/${asset.symbol}`)}
+            >
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div className="flex justify-between items-start">

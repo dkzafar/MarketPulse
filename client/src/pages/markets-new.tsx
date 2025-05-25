@@ -404,7 +404,7 @@ export default function MarketsPage() {
                             <div className="p-4 bg-gray-800 rounded-lg">
                               <h4 className="font-medium mb-3">Key Analysis Points</h4>
                               <ul className="space-y-2">
-                                {aiAnalysis.data.analysis.keyPoints.map((point: string, idx: number) => (
+                                {(aiAnalysis.data.analysis.keyFactors || aiAnalysis.data.analysis.keyPoints || []).map((point: string, idx: number) => (
                                   <li key={idx} className="flex items-start space-x-2">
                                     <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
                                     <span className="text-sm text-gray-300">{point}</span>

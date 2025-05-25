@@ -541,10 +541,16 @@ export default function MarketsPage() {
 
       {/* Detailed Analysis Modal */}
       <Dialog open={detailedAnalysisModal.open} onOpenChange={(open) => setDetailedAnalysisModal(prev => ({ ...prev, open }))}>
-        <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
+        <DialogContent className="max-w-4xl max-h-[90vh] bg-gray-900 border-gray-700 overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white">
-              {detailedAnalysisModal.type === 'priceTarget' ? 'Price Target Analysis' : 'Risk Assessment'}
+            <DialogTitle className="text-white sticky top-0 bg-gray-900 pb-2 border-b border-gray-700">
+              {detailedAnalysisModal.type === 'priceTarget' ? '🎯 Price Target Analysis' : 
+               detailedAnalysisModal.type === 'riskAssessment' ? '⚡ Risk Assessment' :
+               detailedAnalysisModal.type === 'recommendation' ? '📊 Investment Recommendation' :
+               detailedAnalysisModal.type === 'sentiment' ? '💭 Market Sentiment' :
+               detailedAnalysisModal.type === 'confidence' ? '🎯 Analysis Confidence' :
+               detailedAnalysisModal.type === 'aiSummary' ? '🤖 AI Analysis Summary' :
+               detailedAnalysisModal.type === 'keyPoints' ? '🔍 Key Analysis Points' : 'Detailed Analysis'}
             </DialogTitle>
           </DialogHeader>
           

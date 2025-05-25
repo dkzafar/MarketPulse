@@ -40,6 +40,13 @@ export async function handleAIAnalysis(req: Request, res: Response) {
       technicalData
     );
     
+    console.log(`🎯 Generated intelligence for ${symbol}:`, {
+      name: assetIntelligence.name,
+      category: assetCategory,
+      hasContext: !!assetIntelligence.realWorldContext,
+      hasFactors: assetIntelligence.currentFactors?.length || 0
+    });
+    
     // Create comprehensive analysis with Bitcoin-specific insights
     const analysis = {
       recommendation: changePercent > 2 ? 'BUY' : changePercent < -2 ? 'SELL' : 'HOLD',

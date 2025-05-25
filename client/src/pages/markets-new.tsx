@@ -128,6 +128,9 @@ export default function MarketsPage() {
   };
 
   const formatPercent = (percent: number) => {
+    if (typeof percent !== 'number' || isNaN(percent)) {
+      return '0.00%';
+    }
     return `${percent > 0 ? '+' : ''}${percent.toFixed(2)}%`;
   };
 

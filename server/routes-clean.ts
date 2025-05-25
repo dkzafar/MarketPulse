@@ -11,9 +11,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const assets = [
         // Major Cryptocurrencies
-        { symbol: "BTC", name: "Bitcoin", price: 95000, change: 2.5, category: "crypto" },
-        { symbol: "ETH", name: "Ethereum", price: 3200, change: 1.8, category: "crypto" },
-        { symbol: "ADA", name: "Cardano", price: 0.45, change: -0.5, category: "crypto" },
+        { symbol: "BTC", name: "Bitcoin", price: 95000, change: 2375, changePercent: 2.5, volume: 28000000000, marketCap: 1800000000000, category: "crypto" },
+        { symbol: "ETH", name: "Ethereum", price: 3200, change: 56.64, changePercent: 1.8, volume: 15000000000, marketCap: 380000000000, category: "crypto" },
+        { symbol: "ADA", name: "Cardano", price: 0.45, change: -0.0023, changePercent: -0.5, volume: 400000000, marketCap: 15800000000, category: "crypto" },
         
         // Blue Chip Stocks
         { symbol: "AAPL", name: "Apple Inc.", price: 195, change: 1.2, category: "stocks" },

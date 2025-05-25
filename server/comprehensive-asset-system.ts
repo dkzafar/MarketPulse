@@ -5,11 +5,12 @@ import type { AuthenticatedRequest } from "./types";
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
-  // INTELLIGENT CACHING SYSTEM FOR SPEED
+  // INTELLIGENT CACHING SYSTEM FOR SPEED & API RATE LIMITING
   let cachedAssets: any[] = [];
   let lastFetchTime = 0;
-  const CACHE_DURATION = 3 * 60 * 1000; // 3 minutes cache
+  const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache to reduce API calls
   let isCurrentlyFetching = false;
+  let apiCallCounts: { [key: string]: { count: number; resetTime: number } } = {};
 
   // GUARANTEED COMPREHENSIVE ASSET COVERAGE - Full Universe
   app.get("/api/market-data", async (req: Request, res: Response) => {
@@ -139,8 +140,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const YAHOO_BATCH_SIZE = 25;
       let yahooCount = 0;
       
-      // Process in parallel batches for speed - EXPANDED COVERAGE
-      for (let i = 0; i < Math.min(300, allSymbols.length); i += YAHOO_BATCH_SIZE) {
+      // SMART RATE-LIMITED PROCESSING - Yahoo Finance
+      const yahooLimit = 100; // Reduced to stay within limits
+      for (let i = 0; i < Math.min(yahooLimit, allSymbols.length); i += YAHOO_BATCH_SIZE) {
         const batch = allSymbols.slice(i, i + YAHOO_BATCH_SIZE);
         
         const batchPromises = batch.map(async (symbol) => {
@@ -175,8 +177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const validResults = batchResults.filter(result => result !== null);
         allAssets.push(...validResults);
         
-        // Small delay between batches to respect rate limits
-        await new Promise(resolve => setTimeout(resolve, 200));
+        // Longer delay to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
       apiStats['Yahoo Finance'] = yahooCount;
 

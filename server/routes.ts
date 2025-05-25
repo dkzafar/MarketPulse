@@ -897,38 +897,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           basicTechnicalData
         );
         
-        analysis = {
-          recommendation: changePercent > 2 ? 'BUY' : changePercent < -2 ? 'SELL' : 'HOLD',
-          confidence: 0.75,
-          sentiment: changePercent > 0 ? 'bullish' : 'bearish',
-          priceTarget: price * (1 + (changePercent > 0 ? 0.05 : -0.03)),
-          riskLevel: currentAsset.category === 'crypto' ? 'high' : 'medium',
-          analysis: `Investment-grade analysis for ${assetIntelligence.name}: Real-world context analysis`,
-          keyFactors: assetIntelligence.currentFactors,
-          assetCategory: currentAsset.category,
-          
-          // Specific asset intelligence with real-world context
-          assetIntelligence: {
-            name: assetIntelligence.name,
-            realWorldContext: assetIntelligence.realWorldContext,
-            currentFactors: assetIntelligence.currentFactors,
-            priceAction: assetIntelligence.priceAction,
-            stepByStepAnalysis: assetIntelligence.stepByStepAnalysis
-          },
-          
-          // RSI specific meaning for this asset
-          rsiAnalysis: {
-            value: basicTechnicalData.rsi.toFixed(1),
-            meaning: basicTechnicalData.rsi < 30 ? assetIntelligence.rsiMeaning.oversold :
-                     basicTechnicalData.rsi > 70 ? assetIntelligence.rsiMeaning.overbought :
-                     assetIntelligence.rsiMeaning.neutral
-          }
-        };
+        // Return the comprehensive asset intelligence directly
+        analysis = assetIntelligence;
       }
       
       // Enhanced logging for detailed analysis
-      console.log(`✅ Detailed asset intelligence complete for ${symbol}: ${analysis.recommendation} (${Math.round(analysis.confidence * 100)}%)`);
-      console.log(`🔍 Asset intelligence loaded for ${analysis.assetIntelligence?.name || symbol}`);
+      console.log(`✅ Detailed asset intelligence complete for ${symbol}`);
+      console.log(`🔍 Asset intelligence loaded for ${symbol}`);
       
       // Skip external AI services - we have comprehensive internal analysis
       let aiProvider = "Investment-Grade Asset Intelligence";

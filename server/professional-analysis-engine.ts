@@ -286,60 +286,132 @@ export class ProfessionalAnalysisEngine {
   }
 
   /**
-   * Generate professional investment recommendation
+   * Get asset-specific context and meanings
    */
-  generateProfessionalRecommendation(analysis: any): any {
+  getAssetSpecificContext(symbol: string, category: string) {
+    const contexts: { [key: string]: any } = {
+      // Major Tech Stocks
+      'AAPL': {
+        oversoldMeaning: 'Apple rarely stays oversold long due to strong brand loyalty and cash flow',
+        overboughtMeaning: 'Apple at high levels often means iPhone cycle expectations are peaked',
+        bullishTrendMeaning: 'Strong momentum suggests positive product cycle or earnings expectations',
+        bearishTrendMeaning: 'Decline often reflects supply chain concerns or iPhone sales weakness',
+        nearSupportMeaning: 'Apple typically finds buying interest at key levels from institutional investors',
+        nearResistanceMeaning: 'Breaking resistance could signal new product excitement or market expansion',
+        highVolatilityMeaning: 'Unusual for Apple - likely major product news or market-wide tech selloff',
+        lowVolatilityMeaning: 'typical stability, reflecting mature business model',
+        normalVolatilityMeaning: 'this blue-chip technology stock'
+      },
+      'MSFT': {
+        oversoldMeaning: 'Microsoft oversold conditions often present buying opportunities given steady cloud growth',
+        overboughtMeaning: 'High levels may indicate Azure growth expectations are fully priced in',
+        bullishTrendMeaning: 'Reflects strong cloud computing and Office 365 subscription growth',
+        bearishTrendMeaning: 'May indicate concerns about cloud competition or enterprise spending',
+        nearSupportMeaning: 'Microsoft typically attracts institutional buying at support levels',
+        nearResistanceMeaning: 'Breaking resistance often signals new cloud contract wins or AI developments',
+        highVolatilityMeaning: 'Unusual for Microsoft - likely major cloud announcements or competitive pressure',
+        lowVolatilityMeaning: 'enterprise software stability',
+        normalVolatilityMeaning: 'this enterprise software leader'
+      },
+      // Crypto
+      'BTC': {
+        oversoldMeaning: 'Bitcoin oversold levels historically offer buying opportunities for long-term holders',
+        overboughtMeaning: 'Bitcoin at extreme highs often precedes significant corrections',
+        bullishTrendMeaning: 'Suggests growing institutional adoption or positive regulatory news',
+        bearishTrendMeaning: 'Often reflects regulatory concerns, institutional selling, or risk-off sentiment',
+        nearSupportMeaning: 'Bitcoin support levels are critical - breaks often lead to cascading selling',
+        nearResistanceMeaning: 'Breaking Bitcoin resistance can trigger FOMO buying and rapid price acceleration',
+        highVolatilityMeaning: 'Normal for Bitcoin - crypto markets are inherently volatile',
+        lowVolatilityMeaning: 'unusual consolidation, often precedes major moves',
+        normalVolatilityMeaning: 'the leading cryptocurrency'
+      },
+      'ETH': {
+        oversoldMeaning: 'Ethereum oversold conditions may reflect DeFi concerns or network congestion issues',
+        overboughtMeaning: 'High Ethereum levels often coincide with DeFi or NFT market euphoria',
+        bullishTrendMeaning: 'Reflects growing DeFi adoption, network upgrades, or institutional interest',
+        bearishTrendMeaning: 'May indicate concerns about network fees, competition, or DeFi regulation',
+        nearSupportMeaning: 'Ethereum support is crucial for broader DeFi ecosystem confidence',
+        nearResistanceMeaning: 'Breaking resistance often signals new DeFi innovations or network milestones',
+        highVolatilityMeaning: 'Common for Ethereum due to its role in DeFi and smart contracts',
+        lowVolatilityMeaning: 'unusual stability for the DeFi backbone',
+        normalVolatilityMeaning: 'the leading smart contract platform'
+      }
+    };
+
+    // Default context for unknown assets
+    const defaultContext = {
+      oversoldMeaning: `${symbol} at oversold levels may present a buying opportunity if fundamentals remain strong`,
+      overboughtMeaning: `${symbol} at overbought levels suggests caution and potential profit-taking`,
+      bullishTrendMeaning: 'indicating strong investor confidence and positive momentum',
+      bearishTrendMeaning: 'suggesting investor concerns or broader market weakness',
+      nearSupportMeaning: 'This support level is critical for maintaining the current trend',
+      nearResistanceMeaning: 'Breaking this resistance could signal a new upward phase',
+      highVolatilityMeaning: category === 'crypto' ? 'typical for cryptocurrency markets' : 'suggesting uncertainty or major news events',
+      lowVolatilityMeaning: category === 'crypto' ? 'unusual stability for crypto' : 'stable trading conditions',
+      normalVolatilityMeaning: `this ${category} asset`
+    };
+
+    return contexts[symbol] || defaultContext;
+  }
+
+  /**
+   * Generate asset-specific professional investment recommendation
+   */
+  generateProfessionalRecommendation(analysis: any, symbol: string, currentPrice: number, category: string): any {
     let score = 0;
     const factors = [];
     
-    // RSI Analysis
+    // Asset-specific context
+    const assetContext = this.getAssetSpecificContext(symbol, category);
+    
+    // RSI Analysis with asset-specific interpretation
     if (analysis.rsi < 30) {
       score += 2;
-      factors.push(`Oversold condition (RSI: ${analysis.rsi.toFixed(1)}) suggests buying opportunity`);
+      factors.push(`${symbol} is oversold (RSI: ${analysis.rsi.toFixed(1)}) - ${assetContext.oversoldMeaning} This suggests a potential buying opportunity as the selling pressure may be overdone.`);
     } else if (analysis.rsi > 70) {
       score -= 2;
-      factors.push(`Overbought condition (RSI: ${analysis.rsi.toFixed(1)}) suggests caution`);
+      factors.push(`${symbol} is overbought (RSI: ${analysis.rsi.toFixed(1)}) - ${assetContext.overboughtMeaning} Consider taking profits or waiting for a pullback.`);
     } else {
-      factors.push(`Neutral RSI (${analysis.rsi.toFixed(1)}) indicates balanced momentum`);
+      factors.push(`${symbol} shows balanced momentum (RSI: ${analysis.rsi.toFixed(1)}) - price action is neither extremely bullish nor bearish, indicating consolidation.`);
     }
     
-    // Moving Average Analysis
+    // Asset-specific Moving Average Analysis
+    const priceVsSma20 = ((currentPrice - analysis.sma20) / analysis.sma20) * 100;
+    const priceVsSma50 = ((currentPrice - analysis.sma50) / analysis.sma50) * 100;
+    
     if (analysis.currentPrice > analysis.sma20 && analysis.sma20 > analysis.sma50) {
       score += 2;
-      factors.push('Price above key moving averages indicates bullish trend');
+      factors.push(`${symbol} is trading ${priceVsSma20.toFixed(1)}% above its 20-day average (${analysis.sma20.toFixed(2)}) and ${priceVsSma50.toFixed(1)}% above its 50-day average. ${assetContext.bullishTrendMeaning}`);
     } else if (analysis.currentPrice < analysis.sma20 && analysis.sma20 < analysis.sma50) {
       score -= 2;
-      factors.push('Price below key moving averages indicates bearish trend');
+      factors.push(`${symbol} is trading ${Math.abs(priceVsSma20).toFixed(1)}% below its 20-day average and ${Math.abs(priceVsSma50).toFixed(1)}% below its 50-day average. ${assetContext.bearishTrendMeaning}`);
+    } else {
+      factors.push(`${symbol} is trading near its moving averages, suggesting a consolidation phase. The 20-day average is at $${analysis.sma20.toFixed(2)} and 50-day at $${analysis.sma50.toFixed(2)}.`);
     }
     
-    // Bollinger Bands Analysis
-    if (analysis.currentPrice < analysis.bollingerBands.lower) {
+    // Asset-specific Support/Resistance Analysis
+    const distanceToSupport = ((analysis.currentPrice - analysis.support) / analysis.currentPrice) * 100;
+    const distanceToResistance = ((analysis.resistance - analysis.currentPrice) / analysis.currentPrice) * 100;
+    
+    if (distanceToSupport < 2) {
       score += 1;
-      factors.push('Price near lower Bollinger Band suggests potential bounce');
-    } else if (analysis.currentPrice > analysis.bollingerBands.upper) {
+      factors.push(`${symbol} is trading just ${distanceToSupport.toFixed(1)}% above key support at $${analysis.support.toFixed(2)}. ${assetContext.nearSupportMeaning}`);
+    } else if (distanceToResistance < 2) {
       score -= 1;
-      factors.push('Price near upper Bollinger Band suggests potential pullback');
+      factors.push(`${symbol} is approaching resistance at $${analysis.resistance.toFixed(2)}, only ${distanceToResistance.toFixed(1)}% away. ${assetContext.nearResistanceMeaning}`);
+    } else {
+      factors.push(`${symbol} has room to move - ${distanceToSupport.toFixed(1)}% above support ($${analysis.support.toFixed(2)}) and ${distanceToResistance.toFixed(1)}% below resistance ($${analysis.resistance.toFixed(2)}).`);
     }
     
-    // Support/Resistance Analysis
-    const distanceToSupport = (analysis.currentPrice - analysis.support) / analysis.currentPrice;
-    const distanceToResistance = (analysis.resistance - analysis.currentPrice) / analysis.currentPrice;
-    
-    if (distanceToSupport < 0.02) {
-      score += 1;
-      factors.push('Price near strong support level');
-    }
-    if (distanceToResistance > 0.05) {
-      score += 1;
-      factors.push('Significant upside room to resistance');
-    }
-    
-    // Volatility Analysis
+    // Asset-specific Volatility Analysis
+    const annualizedVol = analysis.volatility * 100;
     if (analysis.volatility > 0.4) {
       score -= 1;
-      factors.push('High volatility increases risk profile');
+      factors.push(`${symbol} shows high volatility (${annualizedVol.toFixed(1)}% annually). ${assetContext.highVolatilityMeaning}`);
     } else if (analysis.volatility < 0.15) {
-      factors.push('Low volatility suggests stable price action');
+      factors.push(`${symbol} exhibits low volatility (${annualizedVol.toFixed(1)}% annually), suggesting ${assetContext.lowVolatilityMeaning}`);
+    } else {
+      factors.push(`${symbol} has moderate volatility (${annualizedVol.toFixed(1)}% annually), typical for ${assetContext.normalVolatilityMeaning}`);
     }
     
     // Generate final recommendation

@@ -797,8 +797,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentPrice: currentAsset.price
         };
         
-        // Generate professional recommendation
-        const recommendation = professionalAnalysisEngine.generateProfessionalRecommendation(technicalAnalysis);
+        // Generate asset-specific professional recommendation
+        const recommendation = professionalAnalysisEngine.generateProfessionalRecommendation(
+          technicalAnalysis, 
+          symbol, 
+          currentAsset.price, 
+          currentAsset.category
+        );
         
         // Calculate price target based on technical levels
         const priceTarget = technicalAnalysis.currentPrice > technicalAnalysis.sma20 ? 

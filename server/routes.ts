@@ -212,33 +212,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return null;
         };
 
-        // Smart data fetching system - maximize coverage without duplicates
-        const BATCH_SIZE = 25;
+        // Breakthrough comprehensive asset management - maximize authentic global coverage
+        const BATCH_SIZE = 15; // Smaller batches for better success rate
         const processedSymbols = new Set();
-        const sources = [
-          { name: 'Finnhub', fn: fetchFromFinnhub, limit: 60 },
-          { name: 'Twelve Data', fn: fetchFromTwelveData, limit: 50 },
-          { name: 'FMP', fn: fetchFromFMP, limit: 40 },
-          { name: 'Yahoo Finance', fn: fetchFromYahoo, limit: 80 },
-          { name: 'Polygon', fn: fetchFromPolygon, limit: 30 },
-          { name: 'Alpha Vantage', fn: fetchFromAlphaVantage, limit: alphaVantageKey ? 25 : 0 }
+        const allResults: any[] = [];
+        
+        // Multiple free data sources without strict rate limits
+        const dataSources = [
+          { name: 'Finnhub', fn: fetchFromFinnhub, maxAssets: 60 },
+          { name: 'Yahoo Finance', fn: fetchFromYahoo, maxAssets: 100 },
+          { name: 'Twelve Data', fn: fetchFromTwelveData, maxAssets: 50 },
+          { name: 'FMP', fn: fetchFromFMP, maxAssets: 40 },
+          { name: 'Polygon', fn: fetchFromPolygon, maxAssets: 30 },
+          { name: 'Alpha Vantage', fn: fetchFromAlphaVantage, maxAssets: alphaVantageKey ? 25 : 0 }
         ];
         
-        // Process each source sequentially to maximize coverage
-        for (const source of sources) {
-          if (source.limit === 0) continue;
+        // Smart sequential processing to maximize authentic asset coverage
+        for (const dataSource of dataSources) {
+          if (dataSource.maxAssets === 0) continue;
           
-          console.log(`🔄 Processing ${source.name} (targeting ${source.limit} new assets)...`);
+          console.log(`🔄 Processing ${dataSource.name} (targeting ${dataSource.maxAssets} authentic assets)...`);
           const remainingSymbols = stockSymbols.filter(s => !processedSymbols.has(s));
-          const symbolsForThisSource = remainingSymbols.slice(0, source.limit);
+          const symbolsForThisSource = remainingSymbols.slice(0, dataSource.maxAssets);
+          let sourceSuccessCount = 0;
           
-          for (let i = 0; i < symbolsForThisSource.length; i += BATCH_SIZE) {
+          for (let i = 0; i < symbolsForThisSource.length && sourceSuccessCount < dataSource.maxAssets; i += BATCH_SIZE) {
             const batch = symbolsForThisSource.slice(i, i + BATCH_SIZE);
             
             const batchPromises = batch.map(async (symbol) => {
               if (processedSymbols.has(symbol)) return null;
               
-              const quoteData = await source.fn(symbol);
+              const quoteData = await dataSource.fn(symbol);
             
             // Add more backup sources for comprehensive coverage
             if (!quoteData) {

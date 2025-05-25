@@ -14,6 +14,11 @@ export default function MarketsPage() {
   const [filterBy, setFilterBy] = useState("all");
   const [priceRange, setPriceRange] = useState("all");
   const [selectedAsset, setSelectedAsset] = useState<any>(null);
+  const [detailedAnalysisModal, setDetailedAnalysisModal] = useState<{
+    open: boolean;
+    type: string;
+    data: any;
+  }>({ open: false, type: '', data: null });
 
   // AI Market Analysis mutation
   const aiAnalysis = useMutation({
@@ -408,7 +413,7 @@ export default function MarketsPage() {
                               </h4>
                               <p className="text-gray-300 text-sm">
                                 {aiAnalysis.data.analysis.analysis || 
-                                 `Professional ${aiAnalysis.data.analysis.recommendation || 'HOLD'} signal with ${Math.round(aiAnalysis.data.analysis.confidence) || 65}% confidence. Analysis incorporates technical indicators, market sentiment, volume patterns, and institutional trading activity to provide hedge fund-level insights.`}
+                                 `Professional ${aiAnalysis.data.analysis.recommendation || 'HOLD'} signal with ${Math.round((aiAnalysis.data.analysis.confidence || 0.65) * 100)}% confidence. Analysis incorporates technical indicators, market sentiment, volume patterns, and institutional trading activity to provide hedge fund-level insights.`}
                               </p>
                             </div>
 
@@ -416,7 +421,7 @@ export default function MarketsPage() {
                               <h4 className="font-medium mb-3">Key Analysis Points</h4>
                               <ul className="space-y-2">
                                 {(aiAnalysis.data.analysis.keyFactors || aiAnalysis.data.analysis.keyPoints || [
-                                  `${aiAnalysis.data.analysis.recommendation || 'HOLD'} signal (${Math.round(aiAnalysis.data.analysis.confidence) || 65}% confidence)`,
+                                  `${aiAnalysis.data.analysis.recommendation || 'HOLD'} signal (${Math.round((aiAnalysis.data.analysis.confidence || 0.65) * 100)}% confidence)`,
                                   `Technical Analysis: RSI ${Math.round(30 + Math.random() * 40)}, Moving Average Convergence`,
                                   `Risk Assessment: ${(aiAnalysis.data.analysis.riskLevel || 'medium').toUpperCase()} volatility profile`,
                                   `Institutional Flow: ${Math.random() > 0.5 ? 'Accumulation' : 'Distribution'} pattern detected`,

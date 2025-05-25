@@ -53,7 +53,10 @@ export default function MarketsPage() {
 
   // Smart filtering and sorting logic
   const getFilteredData = () => {
-    let filtered = [...marketData];
+    if (!marketData?.assets || !Array.isArray(marketData.assets)) {
+      return [];
+    }
+    let filtered = [...marketData.assets];
 
     // Filter by asset class
     if (selectedAssetClass !== "all") {

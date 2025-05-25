@@ -298,7 +298,10 @@ export default function MarketsPage() {
             <Card 
               key={index} 
               className="bg-gray-900 border-gray-700 hover:bg-gray-800 transition-all duration-200 hover:border-red-500 cursor-pointer"
-              onClick={() => setLocation(`/analysis/${asset.symbol}`)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocation(`/analysis/${asset.symbol}`);
+              }}
             >
               <CardContent className="p-4">
                 <div className="space-y-3">

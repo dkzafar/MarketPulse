@@ -368,14 +368,26 @@ export default function MarketsPage() {
                                   </span>
                                 </p>
                               </div>
-                              <Badge 
-                                className={`${
-                                  aiAnalysis.data.analysis.sentiment === 'bullish' ? 'bg-green-600' :
-                                  aiAnalysis.data.analysis.sentiment === 'bearish' ? 'bg-red-600' : 'bg-yellow-600'
-                                }`}
-                              >
-                                {aiAnalysis.data.analysis.sentiment.toUpperCase()}
-                              </Badge>
+                              <div className="flex space-x-2">
+                                <Badge 
+                                  className={`cursor-pointer hover:opacity-80 ${
+                                    aiAnalysis.data.analysis.recommendation === 'BUY' ? 'bg-green-600' :
+                                    aiAnalysis.data.analysis.recommendation === 'SELL' ? 'bg-red-600' : 'bg-yellow-600'
+                                  }`}
+                                  onClick={() => setDetailedAnalysisModal({ open: true, type: 'recommendation', data: aiAnalysis.data.analysis })}
+                                >
+                                  {(aiAnalysis.data.analysis.recommendation || 'HOLD').toUpperCase()}
+                                </Badge>
+                                <Badge 
+                                  className={`cursor-pointer hover:opacity-80 ${
+                                    aiAnalysis.data.analysis.sentiment === 'bullish' ? 'bg-green-600' :
+                                    aiAnalysis.data.analysis.sentiment === 'bearish' ? 'bg-red-600' : 'bg-yellow-600'
+                                  }`}
+                                  onClick={() => setDetailedAnalysisModal({ open: true, type: 'sentiment', data: aiAnalysis.data.analysis })}
+                                >
+                                  {(aiAnalysis.data.analysis.sentiment || 'neutral').toUpperCase()}
+                                </Badge>
+                              </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">

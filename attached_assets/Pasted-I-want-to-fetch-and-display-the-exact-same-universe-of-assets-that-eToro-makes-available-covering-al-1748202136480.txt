@@ -1,0 +1,50 @@
+I want to fetch and display the exact same universe of assets that eToro makes available—covering all their stocks, ETFs, indices, commodities, forex pairs, cryptocurrencies, and any other asset class on their platform. Every time data is refreshed, the full list must appear, with no missing items, no duplicates, and always live/up-to-date values. To achieve this, implement the following step-by-step process:
+
+1. **Asset Universe Definition**  
+   a. Programmatically retrieve eToro’s published asset catalogue (via their public endpoints or, if needed, scrape their “All Markets” directory).  
+   b. Store this master list of tickers/IDs + asset type in a persistent reference table called `master_assets`.  
+   c. Schedule a weekly job to re-sync `master_assets` against eToro to detect any additions or removals.
+
+2. **Source Prioritisation & Parallel Fetching**  
+   a. For each asset in `master_assets`, define a prioritized list of free APIs that cover that asset class (e.g. for stocks: Alpha Vantage → Twelve Data → Yahoo Finance → Finnhub; for crypto: CoinGecko → CryptoCompare; etc.).  
+   b. In parallel, attempt to fetch live data (price, % change, volume) from the top API. If the first call returns a rate-limit or error, immediately switch to the next source in the priority list—without slowing or aborting the batch.  
+   c. Use asynchronous, batched requests (e.g. groups of 50 tickers per second) to stay well under individual API rate limits.
+
+3. **Batching & Rate-Limit Mitigation**  
+   a. Break the total asset list into sub-batches sized to fit comfortably within each API’s known free-tier QPS and daily caps.  
+   b. Implement a leaky-bucket or token-bucket queue for each API to throttle requests.  
+   c. If every source for an asset simultaneously fails or hits its cap, mark that asset as “stale” but continue the batch; then immediately trigger a fallback fetch after a short delay (e.g. 1–5 min).
+
+4. **Deduplication & Data Validation**  
+   a. Merge fetched records into a staging table.  
+   b. Run a deduplication routine keyed on ticker/ID + timestamp—reject or merge duplicates.  
+   c. Validate each record against sanity rules (e.g. price > 0, % change within plausible bounds, volume non-negative). Flag any anomalies for manual review but do not drop them outright.
+
+5. **Completeness Checks**  
+   a. After each full fetch, compare the count of successfully retrieved assets against `master_assets`.  
+   b. If count < total, automatically re-attempt fetch only for missing tickers with an exponential-backoff retry (max 3 retries).  
+   c. If still incomplete, send an alert (email or Slack) listing the missing tickers and trigger a fallback “scrape” mode if available.
+
+6. **Automated Testing & Verification**  
+   a. Create a nightly test job that:  
+      - Fetches the latest asset list from eToro.  
+      - Runs your full pipeline on a sandbox environment.  
+      - Verifies 100% overlap between your output and eToro’s data (tickers, asset types).  
+      - Logs any discrepancies and notifies the dev team automatically.
+
+7. **Caching & Incremental Updates**  
+   a. Cache all asset data for a configurable TTL (e.g. 5 minutes) to prevent re-fetching in high-traffic periods.  
+   b. Between full refreshes, support incremental updates: detect which assets have moved most recently (via exchange “lastUpdated” fields or webhook feeds) and refresh only those, then merge back.
+
+8. **Final Publishing**  
+   a. Only publish to users when:  
+      - Passes validation, dedupe, and completeness checks.  
+      - No asset is flagged “stale” beyond a configurable tolerance (e.g. 15 minutes).  
+   b. If any assets remain stale, display them in the UI with a “Data delayed” badge rather than hiding them.
+
+9. **Logging & Monitoring**  
+   a. Log every fetch attempt, success, failure, and source switch.  
+   b. Track real-time metrics on fetch latency, success rate, and completeness percentage.  
+   c. Create dashboards and alerts for any drop below 100% completeness.
+
+Implement this pipeline end-to-end so that every time your platform refreshes, users always see the **entire** universe of eToro-listed assets—accurate, de-duplicated, and live—without manual intervention.```

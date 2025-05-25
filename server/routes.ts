@@ -758,8 +758,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Import the professional analysis engine
       const { professionalAnalysisEngine } = await import("./professional-analysis-engine");
       
-      // Get current market data
-      const currentAsset = { symbol, price, changePercent, volume, marketCap, category: 'stocks' };
+      // Import scalable analysis system to detect asset category
+      const { scalableAnalysisSystem } = await import("./scalable-analysis-system");
+      
+      // Auto-detect the correct category for this asset
+      const detectedCategory = scalableAnalysisSystem.detectAssetCategory(symbol);
+      
+      // Get current market data with correct category
+      const currentAsset = { symbol, price, changePercent, volume, marketCap, category: detectedCategory };
+      
+      console.log(`🎯 Detected ${symbol} as ${detectedCategory} asset`);
       
       // Fetch historical data from free sources
       console.log(`📊 Fetching historical data for ${symbol}...`);
@@ -796,9 +804,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           var95,
           currentPrice: currentAsset.price
         };
-        
-        // Import scalable analysis system for unlimited asset support
-        const { scalableAnalysisSystem } = await import("./scalable-analysis-system");
         
         // Generate personalized analysis for this specific asset
         const personalizedAnalysis = scalableAnalysisSystem.generatePersonalizedAnalysis(

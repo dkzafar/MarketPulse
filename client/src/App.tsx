@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
 import Markets from "@/pages/markets-new";
-import AssetAnalysis from "@/pages/asset-analysis";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import MobileNav from "@/components/mobile-nav";
@@ -47,9 +46,6 @@ function Router() {
           </Route>
           <Route path="/markets-new">
             <ProtectedRoute component={Markets} />
-          </Route>
-          <Route path="/analysis/:symbol">
-            <ProtectedRoute component={AssetAnalysis} />
           </Route>
           <Route path="/">
             <ProtectedRoute component={Dashboard} />

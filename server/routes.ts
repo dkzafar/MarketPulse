@@ -826,8 +826,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sentiment: technicalAnalysis.currentPrice > technicalAnalysis.sma20 ? 'bullish' : 'bearish',
           priceTarget: priceTarget,
           riskLevel: volatility > 0.4 ? 'high' : volatility > 0.2 ? 'medium' : 'low',
-          analysis: `Professional ${recommendation.recommendation} recommendation based on ${historicalPrices.length}-day technical analysis. ${recommendation.technicalSummary}`,
-          keyFactors: recommendation.factors.slice(0, 4),
+          analysis: `${symbol}-specific analysis: ${recommendation.technicalSummary}`,
+          keyFactors: personalizedAnalysis.personalizedFactors,
+          assetCategory: personalizedAnalysis.detectedCategory,
+          personalizedInsights: {
+            symbol: symbol,
+            category: personalizedAnalysis.detectedCategory,
+            specificMeanings: personalizedAnalysis.assetSpecificContext
+          },
           technicalDetails: {
             rsi: rsi.toFixed(1),
             sma20: sma20.toFixed(2),

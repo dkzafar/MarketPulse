@@ -212,36 +212,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return null;
         };
 
-        // Process stocks in batches to handle all 265+ symbols
-        const BATCH_SIZE = 20;
-        let totalProcessed = 0;
+        // Smart data fetching system - maximize coverage without duplicates
+        const BATCH_SIZE = 25;
+        const processedSymbols = new Set();
+        const sources = [
+          { name: 'Finnhub', fn: fetchFromFinnhub, limit: 60 },
+          { name: 'Twelve Data', fn: fetchFromTwelveData, limit: 50 },
+          { name: 'FMP', fn: fetchFromFMP, limit: 40 },
+          { name: 'Yahoo Finance', fn: fetchFromYahoo, limit: 80 },
+          { name: 'Polygon', fn: fetchFromPolygon, limit: 30 },
+          { name: 'Alpha Vantage', fn: fetchFromAlphaVantage, limit: alphaVantageKey ? 25 : 0 }
+        ];
         
-        for (let i = 0; i < stockSymbols.length; i += BATCH_SIZE) {
-          const batch = stockSymbols.slice(i, i + BATCH_SIZE);
+        // Process each source sequentially to maximize coverage
+        for (const source of sources) {
+          if (source.limit === 0) continue;
           
-          const batchPromises = batch.map(async (symbol) => {
-            // Try multiple free data sources for maximum coverage (priority order)
-            let quoteData = await fetchFromFinnhub(symbol);
+          console.log(`🔄 Processing ${source.name} (targeting ${source.limit} new assets)...`);
+          const remainingSymbols = stockSymbols.filter(s => !processedSymbols.has(s));
+          const symbolsForThisSource = remainingSymbols.slice(0, source.limit);
+          
+          for (let i = 0; i < symbolsForThisSource.length; i += BATCH_SIZE) {
+            const batch = symbolsForThisSource.slice(i, i + BATCH_SIZE);
             
-            if (!quoteData) {
-              quoteData = await fetchFromTwelveData(symbol);
-            }
-            
-            if (!quoteData) {
-              quoteData = await fetchFromFMP(symbol);
-            }
-            
-            if (!quoteData) {
-              quoteData = await fetchFromYahoo(symbol);
-            }
-            
-            if (!quoteData) {
-              quoteData = await fetchFromPolygon(symbol);
-            }
-            
-            if (!quoteData && alphaVantageKey) {
-              quoteData = await fetchFromAlphaVantage(symbol);
-            }
+            const batchPromises = batch.map(async (symbol) => {
+              if (processedSymbols.has(symbol)) return null;
+              
+              const quoteData = await source.fn(symbol);
             
             // Add more backup sources for comprehensive coverage
             if (!quoteData) {

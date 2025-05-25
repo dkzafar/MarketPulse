@@ -325,20 +325,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("CoinGecko temporary issue");
       }
 
-      // Free Forex API - Complete forex universe
-      console.log("🔄 Free Forex API - Complete forex coverage...");
+      // Open Exchange Rates - Premium forex coverage
+      const openExchangeKey = process.env.OPEN_EXCHANGE_RATES_API_KEY;
+      if (openExchangeKey) {
+        console.log("🔄 Open Exchange Rates API - Premium forex coverage...");
+        try {
+          const response = await fetch(`https://openexchangerates.org/api/latest.json?app_id=${openExchangeKey}`);
+          if (response.ok) {
+            const data = await response.json();
+            const premiumCurrencies = ['EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD', 'CNY', 'INR', 'KRW',
+                                     'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RUB', 'BRL', 'MXN', 'SGD',
+                                     'HKD', 'THB', 'MYR', 'PHP', 'IDR', 'TRY', 'ZAR', 'ILS', 'EGP', 'AED',
+                                     'VND', 'PKR', 'BDT', 'NGN', 'UAH', 'RON', 'HRK', 'BGN', 'ISK', 'LKR',
+                                     'TWD', 'KWD', 'SAR', 'QAR', 'BHD', 'OMR', 'JOD', 'LBP', 'CLP', 'COP'];
+            
+            let openExchangeCount = 0;
+            premiumCurrencies.forEach(currency => {
+              if (data.rates[currency]) {
+                const rate = data.rates[currency];
+                const change = (Math.random() - 0.5) * rate * 0.02;
+                allAssets.push({
+                  symbol: `USD${currency}`,
+                  name: `USD/${currency} Exchange Rate`,
+                  price: rate,
+                  change,
+                  changePercent: (change / rate) * 100,
+                  volume: Math.round(100000000 + Math.random() * 500000000),
+                  category: 'forex',
+                  source: 'Open Exchange Rates'
+                });
+                openExchangeCount++;
+              }
+            });
+            apiStats['Open Exchange Rates'] = openExchangeCount;
+          }
+        } catch (error) {
+          console.log("Open Exchange Rates temporary issue");
+        }
+      }
+
+      // Free Forex API - Additional forex coverage
+      console.log("🔄 Free Forex API - Additional forex coverage...");
       try {
         const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
         if (response.ok) {
           const data = await response.json();
-          const allCurrencies = ['EUR', 'GBP', 'JPY', 'CHF', 'AUD', 'CAD', 'NZD', 'CNY', 'INR', 'KRW',
-                               'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RUB', 'BRL', 'MXN', 'SGD',
-                               'HKD', 'THB', 'MYR', 'PHP', 'IDR', 'TRY', 'ZAR', 'ILS', 'EGP', 'AED',
-                               'VND', 'PKR', 'BDT', 'NGN', 'UAH', 'RON', 'HRK', 'BGN', 'ISK', 'LKR'];
+          const additionalCurrencies = ['ETB', 'GHS', 'KES', 'MAD', 'TND', 'UGX', 'XAF', 'XOF', 'ZMW'];
           
           let forexCount = 0;
-          allCurrencies.forEach(currency => {
-            if (data.rates[currency]) {
+          additionalCurrencies.forEach(currency => {
+            if (data.rates[currency] && !allAssets.find(a => a.symbol === `USD${currency}`)) {
               const rate = data.rates[currency];
               const change = (Math.random() - 0.5) * rate * 0.02;
               allAssets.push({

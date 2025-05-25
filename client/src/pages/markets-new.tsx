@@ -120,13 +120,15 @@ export default function MarketsPage() {
   const filteredData = getFilteredData();
 
   // Utility functions
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | undefined) => {
+    if (!price || price === undefined) return '0.00';
     if (price < 1) return price.toFixed(4);
     if (price < 100) return price.toFixed(2);
     return price.toFixed(2);
   };
 
-  const formatPercent = (percent: number) => {
+  const formatPercent = (percent: number | undefined) => {
+    if (!percent || percent === undefined) return '0.00%';
     return `${percent > 0 ? '+' : ''}${percent.toFixed(2)}%`;
   };
 

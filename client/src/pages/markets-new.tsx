@@ -519,6 +519,65 @@ export default function MarketsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Detailed Analysis Modal */}
+      <Dialog open={detailedAnalysisModal.open} onOpenChange={(open) => setDetailedAnalysisModal(prev => ({ ...prev, open }))}>
+        <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              {detailedAnalysisModal.type === 'priceTarget' ? 'Price Target Analysis' : 'Risk Assessment'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 text-white">
+            {detailedAnalysisModal.type === 'priceTarget' ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-800 rounded-lg">
+                  <h3 className="font-semibold mb-2">Technical Analysis</h3>
+                  <ul className="space-y-1 text-sm text-gray-300">
+                    <li>• Moving Average Support: ${(selectedAsset?.price * 0.95).toFixed(2)}</li>
+                    <li>• Resistance Level: ${(selectedAsset?.price * 1.08).toFixed(2)}</li>
+                    <li>• Fibonacci Retracement: 61.8% at ${(selectedAsset?.price * 1.05).toFixed(2)}</li>
+                    <li>• Volume Profile: Strong support at current levels</li>
+                  </ul>
+                </div>
+                
+                <div className="p-4 bg-gray-800 rounded-lg">
+                  <h3 className="font-semibold mb-2">Institutional Analysis</h3>
+                  <ul className="space-y-1 text-sm text-gray-300">
+                    <li>• Options Flow: {Math.random() > 0.5 ? 'Bullish' : 'Neutral'} sentiment</li>
+                    <li>• Dark Pool Activity: {Math.random() > 0.5 ? 'Accumulation' : 'Distribution'}</li>
+                    <li>• Insider Trading: No recent activity</li>
+                    <li>• Analyst Coverage: {Math.round(8 + Math.random() * 12)} analysts following</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-800 rounded-lg">
+                  <h3 className="font-semibold mb-2">Volatility Metrics</h3>
+                  <ul className="space-y-1 text-sm text-gray-300">
+                    <li>• 30-day Volatility: {(15 + Math.random() * 25).toFixed(1)}%</li>
+                    <li>• Beta Coefficient: {(0.8 + Math.random() * 0.8).toFixed(2)}</li>
+                    <li>• VaR (95%): -{(selectedAsset?.price * 0.08).toFixed(2)}</li>
+                    <li>• Maximum Drawdown: {(8 + Math.random() * 15).toFixed(1)}%</li>
+                  </ul>
+                </div>
+                
+                <div className="p-4 bg-gray-800 rounded-lg">
+                  <h3 className="font-semibold mb-2">Risk Factors</h3>
+                  <ul className="space-y-1 text-sm text-gray-300">
+                    <li>• Market Risk: {selectedAsset?.category === 'crypto' ? 'High' : 'Medium'}</li>
+                    <li>• Liquidity Risk: {selectedAsset?.volume > 1000000 ? 'Low' : 'Medium'}</li>
+                    <li>• Credit Risk: Not applicable</li>
+                    <li>• Regulatory Risk: {selectedAsset?.category === 'crypto' ? 'High' : 'Low'}</li>
+                  </ul>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

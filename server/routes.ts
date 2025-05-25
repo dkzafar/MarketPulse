@@ -608,7 +608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         analysis: {
           sentiment,
-          confidence: signalStrength / 100,
+          confidence: signalStrength,
           tradingRecommendation: tradingSignal,
           expectedReturn,
           riskLevel,

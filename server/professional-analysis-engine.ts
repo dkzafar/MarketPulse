@@ -286,7 +286,7 @@ export class ProfessionalAnalysisEngine {
   }
 
   /**
-   * Get asset-specific context and meanings
+   * Get comprehensive asset-specific context for ALL assets
    */
   getAssetSpecificContext(symbol: string, category: string) {
     const contexts: { [key: string]: any } = {
@@ -335,23 +335,139 @@ export class ProfessionalAnalysisEngine {
         highVolatilityMeaning: 'Common for Ethereum due to its role in DeFi and smart contracts',
         lowVolatilityMeaning: 'unusual stability for the DeFi backbone',
         normalVolatilityMeaning: 'the leading smart contract platform'
+      },
+      // Major Stocks
+      'TSLA': {
+        oversoldMeaning: 'Tesla oversold often creates buying opportunities given strong EV market position',
+        overboughtMeaning: 'Tesla overbought levels may reflect excessive EV enthusiasm or Musk news',
+        bullishTrendMeaning: 'Strong momentum likely driven by EV delivery numbers or autonomous driving progress',
+        bearishTrendMeaning: 'Decline often reflects production concerns, competition, or regulatory issues',
+        nearSupportMeaning: 'Tesla support levels are closely watched by retail and institutional investors',
+        nearResistanceMeaning: 'Breaking Tesla resistance often triggers momentum buying from EV enthusiasts',
+        highVolatilityMeaning: 'Normal for Tesla due to CEO influence and growth stock nature',
+        lowVolatilityMeaning: 'unusual consolidation for this volatile growth stock',
+        normalVolatilityMeaning: 'this high-growth EV manufacturer'
+      },
+      'GOOGL': {
+        oversoldMeaning: 'Google oversold conditions often present value opportunities given ad market dominance',
+        overboughtMeaning: 'High Google levels may indicate AI or search monopoly concerns are priced in',
+        bullishTrendMeaning: 'Reflects strong digital advertising growth or AI/cloud developments',
+        bearishTrendMeaning: 'May indicate regulatory concerns or competition in search/ads',
+        nearSupportMeaning: 'Google typically finds institutional support given strong fundamentals',
+        nearResistanceMeaning: 'Breaking resistance often signals new AI breakthroughs or market expansion',
+        highVolatilityMeaning: 'Unusual for Google - likely major regulatory or competitive news',
+        lowVolatilityMeaning: 'typical stability for this mature tech giant',
+        normalVolatilityMeaning: 'this search and advertising leader'
+      },
+      'AMZN': {
+        oversoldMeaning: 'Amazon oversold levels often attract buyers given AWS and e-commerce dominance',
+        overboughtMeaning: 'High Amazon levels may reflect peak e-commerce or cloud growth expectations',
+        bullishTrendMeaning: 'Strong momentum suggests AWS growth or e-commerce market expansion',
+        bearishTrendMeaning: 'Decline often reflects retail margin concerns or cloud competition',
+        nearSupportMeaning: 'Amazon support is critical given its market leadership position',
+        nearResistanceMeaning: 'Breaking resistance often signals new cloud wins or retail innovations',
+        highVolatilityMeaning: 'Unusual for Amazon - likely major earnings surprise or competitive pressure',
+        lowVolatilityMeaning: 'stable trading for this diversified tech giant',
+        normalVolatilityMeaning: 'this e-commerce and cloud leader'
+      },
+      // Major Crypto beyond BTC/ETH
+      'BNB': {
+        oversoldMeaning: 'Binance Coin oversold often reflects exchange regulatory concerns or market fear',
+        overboughtMeaning: 'BNB at high levels typically coincides with crypto bull markets and exchange volume',
+        bullishTrendMeaning: 'Suggests growing Binance ecosystem adoption and trading volume',
+        bearishTrendMeaning: 'Often reflects regulatory scrutiny of exchanges or crypto market weakness',
+        nearSupportMeaning: 'BNB support is crucial for broader crypto exchange confidence',
+        nearResistanceMeaning: 'Breaking resistance often signals new exchange features or crypto adoption',
+        highVolatilityMeaning: 'Common for exchange tokens during regulatory uncertainty',
+        lowVolatilityMeaning: 'unusual stability for this exchange utility token',
+        normalVolatilityMeaning: 'this leading exchange token'
+      },
+      'ADA': {
+        oversoldMeaning: 'Cardano oversold conditions may reflect smart contract adoption concerns',
+        overboughtMeaning: 'ADA at high levels often coincides with ecosystem development hype',
+        bullishTrendMeaning: 'Reflects growing DeFi adoption on Cardano or major ecosystem updates',
+        bearishTrendMeaning: 'May indicate slower adoption compared to Ethereum or development delays',
+        nearSupportMeaning: 'Cardano support reflects long-term holder confidence in the ecosystem',
+        nearResistanceMeaning: 'Breaking resistance often signals major protocol upgrades or partnerships',
+        highVolatilityMeaning: 'Normal for this emerging smart contract platform',
+        lowVolatilityMeaning: 'unusual consolidation for this development-focused blockchain',
+        normalVolatilityMeaning: 'this proof-of-stake blockchain platform'
+      },
+      // Forex Majors
+      'EURUSD': {
+        oversoldMeaning: 'EUR/USD oversold often reflects ECB policy concerns or US dollar strength',
+        overboughtMeaning: 'High EUR/USD levels may indicate Fed dovishness or European economic strength',
+        bullishTrendMeaning: 'Suggests European economic recovery or Fed policy uncertainty',
+        bearishTrendMeaning: 'Often reflects US economic strength or European growth concerns',
+        nearSupportMeaning: 'EUR/USD support is critical for global trade and central bank interventions',
+        nearResistanceMeaning: 'Breaking resistance often signals major central bank policy shifts',
+        highVolatilityMeaning: 'Common during central bank meetings or economic data releases',
+        lowVolatilityMeaning: 'stable conditions between major economies',
+        normalVolatilityMeaning: 'the world\'s most traded currency pair'
       }
     };
 
-    // Default context for unknown assets
-    const defaultContext = {
-      oversoldMeaning: `${symbol} at oversold levels may present a buying opportunity if fundamentals remain strong`,
-      overboughtMeaning: `${symbol} at overbought levels suggests caution and potential profit-taking`,
-      bullishTrendMeaning: 'indicating strong investor confidence and positive momentum',
-      bearishTrendMeaning: 'suggesting investor concerns or broader market weakness',
-      nearSupportMeaning: 'This support level is critical for maintaining the current trend',
-      nearResistanceMeaning: 'Breaking this resistance could signal a new upward phase',
-      highVolatilityMeaning: category === 'crypto' ? 'typical for cryptocurrency markets' : 'suggesting uncertainty or major news events',
-      lowVolatilityMeaning: category === 'crypto' ? 'unusual stability for crypto' : 'stable trading conditions',
-      normalVolatilityMeaning: `this ${category} asset`
+    // Intelligent category-based defaults for ALL assets
+    const categoryDefaults: { [key: string]: any } = {
+      'crypto': {
+        oversoldMeaning: `${symbol} oversold conditions in crypto often create significant buying opportunities for risk-tolerant investors`,
+        overboughtMeaning: `${symbol} at extreme highs may signal profit-taking time, as crypto corrections can be swift and severe`,
+        bullishTrendMeaning: 'Strong crypto momentum often reflects growing adoption, positive news, or institutional interest',
+        bearishTrendMeaning: 'Crypto declines frequently stem from regulatory concerns, market sentiment shifts, or profit-taking',
+        nearSupportMeaning: `${symbol} support levels are crucial - crypto breakdowns can trigger cascading liquidations`,
+        nearResistanceMeaning: `Breaking ${symbol} resistance often leads to explosive upward moves due to FOMO buying`,
+        highVolatilityMeaning: 'Normal for cryptocurrency markets - expect significant price swings',
+        lowVolatilityMeaning: 'unusual consolidation for crypto, often precedes major directional moves',
+        normalVolatilityMeaning: 'this cryptocurrency asset'
+      },
+      'stocks': {
+        oversoldMeaning: `${symbol} oversold conditions may represent value opportunities if company fundamentals remain solid`,
+        overboughtMeaning: `${symbol} at high levels suggests careful evaluation of valuation metrics before buying`,
+        bullishTrendMeaning: 'Positive stock momentum often reflects strong earnings prospects or sector rotation',
+        bearishTrendMeaning: 'Stock weakness may indicate earnings concerns, sector headwinds, or broader market rotation',
+        nearSupportMeaning: `${symbol} support levels often attract institutional buying and value investors`,
+        nearResistanceMeaning: `Breaking ${symbol} resistance could signal improved earnings outlook or sector strength`,
+        highVolatilityMeaning: 'Elevated volatility suggests significant news, earnings surprises, or sector uncertainty',
+        lowVolatilityMeaning: 'stable trading conditions, typical for established companies',
+        normalVolatilityMeaning: 'this equity investment'
+      },
+      'forex': {
+        oversoldMeaning: `${symbol} oversold levels often reflect economic imbalances or central bank policy divergence`,
+        overboughtMeaning: `${symbol} at extreme levels may signal currency intervention risk or policy response`,
+        bullishTrendMeaning: 'Currency strength typically reflects relative economic outperformance or hawkish policy',
+        bearishTrendMeaning: 'Currency weakness often stems from economic concerns or dovish central bank policy',
+        nearSupportMeaning: `${symbol} support is critical for trade balance and may trigger central bank intervention`,
+        nearResistanceMeaning: `Breaking ${symbol} resistance often signals major economic or policy shifts`,
+        highVolatilityMeaning: 'Common during economic data releases, central bank meetings, or geopolitical events',
+        lowVolatilityMeaning: 'stable currency conditions reflecting balanced economic fundamentals',
+        normalVolatilityMeaning: 'this currency pair'
+      },
+      'commodities': {
+        oversoldMeaning: `${symbol} oversold conditions may reflect oversupply concerns or economic slowdown fears`,
+        overboughtMeaning: `${symbol} at high levels often indicates supply constraints or strong demand fundamentals`,
+        bullishTrendMeaning: 'Commodity strength typically reflects supply/demand imbalances or inflation concerns',
+        bearishTrendMeaning: 'Commodity weakness often stems from oversupply, demand destruction, or economic slowdown',
+        nearSupportMeaning: `${symbol} support reflects production cost levels and supply/demand equilibrium`,
+        nearResistanceMeaning: `Breaking ${symbol} resistance often signals supply shortages or demand acceleration`,
+        highVolatilityMeaning: 'Common for commodities due to weather, geopolitics, and supply chain disruptions',
+        lowVolatilityMeaning: 'stable supply/demand conditions',
+        normalVolatilityMeaning: 'this commodity asset'
+      },
+      'indices': {
+        oversoldMeaning: `${symbol} oversold conditions often represent broad market buying opportunities`,
+        overboughtMeaning: `${symbol} at extreme highs may signal market exuberance and correction risk`,
+        bullishTrendMeaning: 'Index strength reflects broad economic optimism and corporate earnings growth',
+        bearishTrendMeaning: 'Index weakness often indicates economic concerns or earnings disappointments',
+        nearSupportMeaning: `${symbol} support represents broad market confidence and institutional buying levels`,
+        nearResistanceMeaning: `Breaking ${symbol} resistance often signals new market highs and continued optimism`,
+        highVolatilityMeaning: 'Elevated market volatility suggests uncertainty about economic direction',
+        lowVolatilityMeaning: 'stable market conditions reflecting economic stability',
+        normalVolatilityMeaning: 'this market index'
+      }
     };
 
-    return contexts[symbol] || defaultContext;
+    // Return specific context or intelligent category-based default
+    return contexts[symbol] || categoryDefaults[category] || categoryDefaults['stocks'];
   }
 
   /**

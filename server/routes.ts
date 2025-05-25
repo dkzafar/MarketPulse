@@ -849,6 +849,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         
         console.log(`✅ Professional analysis complete for ${symbol}: ${analysis.recommendation} (${Math.round(analysis.confidence * 100)}%)`);
+        console.log(`🔍 Personalized factors for ${symbol}:`, personalizedAnalysis.personalizedFactors);
+        console.log(`📊 Asset category detected: ${personalizedAnalysis.detectedCategory}`);
       } else {
         console.log(`⚠️ Limited historical data for ${symbol}, using enhanced fallback analysis`);
         

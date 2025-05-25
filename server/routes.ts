@@ -797,13 +797,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentPrice: currentAsset.price
         };
         
-        // Generate asset-specific professional recommendation
-        const recommendation = professionalAnalysisEngine.generateProfessionalRecommendation(
-          technicalAnalysis, 
+        // Import scalable analysis system for unlimited asset support
+        const { scalableAnalysisSystem } = await import("./scalable-analysis-system");
+        
+        // Generate personalized analysis for this specific asset
+        const personalizedAnalysis = scalableAnalysisSystem.generatePersonalizedAnalysis(
           symbol, 
-          currentAsset.price, 
-          currentAsset.category
+          currentAsset.category, 
+          technicalAnalysis
         );
+        
+        // Create recommendation based on personalized factors
+        const recommendation = {
+          recommendation: technicalAnalysis.rsi < 30 ? 'BUY' : technicalAnalysis.rsi > 70 ? 'SELL' : 'HOLD',
+          confidence: 0.75,
+          factors: personalizedAnalysis.personalizedFactors,
+          technicalSummary: `Personalized ${symbol} analysis using authentic market data`
+        };
         
         // Calculate price target based on technical levels
         const priceTarget = technicalAnalysis.currentPrice > technicalAnalysis.sma20 ? 

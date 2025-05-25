@@ -286,7 +286,40 @@ export class ProfessionalAnalysisEngine {
   }
 
   /**
-   * Get comprehensive asset-specific context for ALL assets
+   * Smart asset category detection for unlimited scalability
+   */
+  detectAssetCategory(symbol: string, providedCategory: string): string {
+    // If category is already provided and valid, use it
+    if (providedCategory && ['crypto', 'stocks', 'forex', 'commodities', 'indices'].includes(providedCategory)) {
+      return providedCategory;
+    }
+    
+    // Smart detection patterns for any new assets
+    const cryptoPatterns = /^(BTC|ETH|ADA|DOT|SOL|AVAX|MATIC|LINK|UNI|AAVE|COMP|YFI|SUSHI|CRV|BAL|MKR|SNX|1INCH|ALPHA|BADGER|BAND|BNT|CREAM|DPI|FTT|GRT|KNC|LRC|MANA|MLN|NMR|OM|OXT|PNK|REN|REP|RLC|SAND|SKL|SRM|STORJ|SXP|TRB|UMA|WBTC|ZRX|SHIB|DOGE|LTC|BCH|XRP|ATOM|ALGO|VET|FIL|THETA|TRX|EOS|XLM|IOTA|NEO|DASH|ZEC|XTZ|QTUM|ONT|ICX|ZIL|BAT|ENJ|HOT|IOTX|WAN|RVN|DGB|SC|LSK|ARK|STRAT|WAVES|KMD|BTS|STEEM|DCR|NANO|MAID|GNT|REP|XEM|NXT|BURST|SYS|VIA|GAME|NLG|BLK|XPM|PPC|NVC|FTC|TRC|IFC|FRC|MEC|AUR|CNC|DGC|WDC|YAC|ELC|GLD|XJO|BTE|SBC|LKY|MOON|MEOW|DIME|POINTS|FLAP|TIPS|CAT|NYAN|OMNI|MSC|SAFE|URO|FAIR|PINK|VRC|XC|CLOAK|KEY|CRYPT|SSD|RBBT|VIOR|VPN|NODE|SUPER|XCO|NAUT|SYNC|BOOM|BLOCK|MAST|CLUB|RICHX|START|KORE|XSI|BITS|HYPER|GPM|GP|IOC|TAC|ESP|GIVE|SPR|ECC|DTC|MAID|SJCX|FCT|AMP|AGRS|FLDC|MMNXT|BITB|SFR|NXTI|LTB|GEMZ|GEMZS|CURE|LTBC|LTBCX|RUBY|RBY|BURST|DIEM|USC|UNY|UNITS|HZ|OPAL|CLAM|UNITY|XPY|GAP|MOTO|ARC|OK|PWR|NSR|NBT|XDN|BCN|QCN|FCN|MCN|DSH|BTCD|BTS|NXT|VIA|XRP|STR|DOGE|PPC|NMC|AUR|MZC|WDC|VTC|UTC|TGC|TRC|TEK|QRK|PXC|PHS|PTC|ORB|NVC|NET|MEC|MAX|LTC|LKY|JKC|IXC|I0C|HYP|HBN|GDC|FST|FRC|FLO|FJC|ELC|EAC|DVC|DGC|CNC|CMC|CAP|BTB|BTE|BQC|BET|BBQ|ARG|ALF|ADT)$/i;
+    
+    const forexPatterns = /^(EUR|USD|GBP|JPY|AUD|CAD|CHF|NZD|SEK|NOK|DKK|PLN|HUF|CZK|TRY|ZAR|MXN|BRL|RUB|CNY|HKD|SGD|KRW|INR|THB|MYR|IDR|PHP|VND)(USD|EUR|GBP|JPY|AUD|CAD|CHF|NZD|SEK|NOK|DKK|PLN|HUF|CZK|TRY|ZAR|MXN|BRL|RUB|CNY|HKD|SGD|KRW|INR|THB|MYR|IDR|PHP|VND)$/i;
+    
+    const commodityPatterns = /^(GOLD|SILVER|OIL|CRUDE|WTI|BRENT|GAS|WHEAT|CORN|SOYBEAN|COPPER|PLATINUM|PALLADIUM|COCOA|COFFEE|SUGAR|COTTON|LUMBER|RICE|OATS)$/i;
+    
+    const indexPatterns = /^(SPY|QQQ|IWM|DIA|VTI|VEA|VWO|AGG|BND|TLT|GLD|SLV|USO|VXX|SQQQ|TQQQ|SPXL|SPXS|UVXY|VIXY|VIX|SPX|NDX|RUT|DJI|IXIC|GSPC|TNX|DXY)$/i;
+    
+    // Pattern matching for automatic detection
+    if (cryptoPatterns.test(symbol)) return 'crypto';
+    if (forexPatterns.test(symbol)) return 'forex';
+    if (commodityPatterns.test(symbol)) return 'commodities';
+    if (indexPatterns.test(symbol)) return 'indices';
+    
+    // Advanced heuristics for stocks
+    if (symbol.length >= 1 && symbol.length <= 5 && /^[A-Z]+$/.test(symbol)) {
+      return 'stocks';
+    }
+    
+    // Default fallback
+    return providedCategory || 'stocks';
+  }
+
+  /**
+   * Get comprehensive asset-specific context for ALL assets (unlimited scalability)
    */
   getAssetSpecificContext(symbol: string, category: string) {
     const contexts: { [key: string]: any } = {
@@ -404,7 +437,13 @@ export class ProfessionalAnalysisEngine {
         highVolatilityMeaning: 'Common during central bank meetings or economic data releases',
         lowVolatilityMeaning: 'stable conditions between major economies',
         normalVolatilityMeaning: 'the world\'s most traded currency pair'
-      }
+      },
+      // Auto-expandable for new major assets
+      ...(this.generateExpandedAssetContexts(symbol, category))
+    };
+
+    // Enhanced intelligent category-based analysis for unlimited scalability
+    const smartCategoryDefaults = this.getSmartCategoryAnalysis(symbol, category);
     };
 
     // Intelligent category-based defaults for ALL assets
@@ -466,8 +505,11 @@ export class ProfessionalAnalysisEngine {
       }
     };
 
-    // Return specific context or intelligent category-based default
-    return contexts[symbol] || categoryDefaults[category] || categoryDefaults['stocks'];
+    // Enhanced automatic detection for new assets
+    const autoDetectedCategory = this.detectAssetCategory(symbol, category);
+    
+    // Return specific context, intelligent category-based default, or auto-detected context
+    return contexts[symbol] || categoryDefaults[autoDetectedCategory] || categoryDefaults['stocks'];
   }
 
   /**

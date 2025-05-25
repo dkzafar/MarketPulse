@@ -889,11 +889,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           resistance: price * 1.05
         };
         
+        // Determine asset category for intelligence
+        const assetCategory = symbol === 'BTC' || symbol === 'ETH' ? 'crypto' : 
+                             symbol.includes('USD') || symbol.includes('EUR') ? 'forex' :
+                             'stocks';
+        
         // Get specific intelligence for this individual asset
         const assetIntelligence = advancedAssetAnalyzer.getSpecificAssetIntelligence(
           symbol, 
-          currentAsset.category, 
-          currentAsset.price,
+          assetCategory, 
+          price,
           basicTechnicalData
         );
         
@@ -903,7 +908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           confidence: 0.85,
           sentiment: changePercent > 0 ? 'bullish' : 'bearish',
           priceTarget: price * (1 + (changePercent > 0 ? 0.08 : -0.05)),
-          riskLevel: currentAsset.category === 'crypto' ? 'medium' : 'low',
+          riskLevel: assetCategory === 'crypto' ? 'medium' : 'low',
           
           // Detailed asset intelligence
           assetName: assetIntelligence.name,
@@ -1140,30 +1145,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('AI market analysis error:', error);
       
-      // Return professional analysis even if there's an error
-      const fallbackSentiment = (changePercent || 0) > 2 ? 'bullish' : (changePercent || 0) < -2 ? 'bearish' : 'neutral';
-      const fallbackConfidence = Math.round(65 + Math.random() * 20);
-      const fallbackRecommendation = fallbackSentiment === 'bullish' ? 'BUY' : fallbackSentiment === 'bearish' ? 'SELL' : 'HOLD';
-      
-      res.json({
-        success: true,
-        analysis: {
-          sentiment: fallbackSentiment,
-          confidence: fallbackConfidence,
-          recommendation: fallbackRecommendation,
-          priceTarget: (price || 100) * (fallbackSentiment === 'bullish' ? 1.08 : 0.95),
-          expectedReturn: fallbackSentiment === 'bullish' ? 8.2 : fallbackSentiment === 'bearish' ? -4.8 : 1.2,
-          riskLevel: Math.abs(changePercent || 0) > 5 ? 'high' : 'medium',
-          analysis: `Professional analysis for ${symbol}: ${fallbackRecommendation} signal with ${fallbackConfidence}% confidence. Current momentum is ${fallbackSentiment} with ${Math.abs(changePercent || 0).toFixed(2)}% movement.`,
-          keyFactors: [
-            `${fallbackRecommendation} signal (${fallbackConfidence}% confidence)`,
-            `Momentum: ${fallbackSentiment.toUpperCase()}`,
-            `Price movement: ${(changePercent || 0).toFixed(2)}%`,
-            `Risk level: ${Math.abs(changePercent || 0) > 5 ? 'HIGH' : 'MEDIUM'}`
-          ]
-        },
-        timestamp: new Date().toISOString(),
-        symbol
+      // Even with error, try to return basic structured response
+      res.status(500).json({
+        success: false,
+        error: 'Analysis system temporarily unavailable',
+        timestamp: new Date().toISOString()
       });
     }
   });

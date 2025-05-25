@@ -67,7 +67,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'VNQ', 'XLK', 'XLF', 'XLE', 'XLV', 'XLI', 'XLP', 'XLU', 'XLRE', 'XLB'
         ];
         
-        // Process ALL stocks with multiple data sources for maximum coverage
+        // Process ALL stocks with multiple free data sources for maximum coverage
+        const fetchFromTwelveData = async (symbol: string) => {
+          try {
+            const response = await fetch(`https://api.twelvedata.com/quote?symbol=${symbol}&apikey=demo`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.close && parseFloat(data.close) > 0) {
+                return {
+                  c: parseFloat(data.close),
+                  d: parseFloat(data.change),
+                  dp: parseFloat(data.percent_change),
+                  h: parseFloat(data.high),
+                  l: parseFloat(data.low),
+                  pc: parseFloat(data.previous_close)
+                };
+              }
+            }
+          } catch (error) {
+            console.log(`Twelve Data error for ${symbol}`);
+          }
+          return null;
+        };
+
+        const fetchFromFMP = async (symbol: string) => {
+          try {
+            const response = await fetch(`https://financialmodelingprep.com/api/v3/quote/${symbol}?apikey=demo`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data[0] && data[0].price > 0) {
+                return {
+                  c: data[0].price,
+                  d: data[0].change,
+                  dp: data[0].changesPercentage,
+                  h: data[0].dayHigh,
+                  l: data[0].dayLow,
+                  pc: data[0].previousClose
+                };
+              }
+            }
+          } catch (error) {
+            console.log(`FMP error for ${symbol}`);
+          }
+          return null;
+        };
+
+        const fetchFromPolygon = async (symbol: string) => {
+          try {
+            const response = await fetch(`https://api.polygon.io/v2/aggs/ticker/${symbol}/prev?adjusted=true&apiKey=demo`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.results && data.results[0]) {
+                const result = data.results[0];
+                return {
+                  c: result.c,
+                  d: result.c - result.o,
+                  dp: ((result.c - result.o) / result.o) * 100,
+                  h: result.h,
+                  l: result.l,
+                  pc: result.o
+                };
+              }
+            }
+          } catch (error) {
+            console.log(`Polygon error for ${symbol}`);
+          }
+          return null;
+        };
+
         const fetchFromFinnhub = async (symbol: string) => {
           try {
             const response = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${finnhubKey}`);
@@ -137,11 +204,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const batch = stockSymbols.slice(i, i + BATCH_SIZE);
           
           const batchPromises = batch.map(async (symbol) => {
-            // Try multiple data sources for maximum coverage
+            // Try multiple free data sources for maximum coverage (priority order)
             let quoteData = await fetchFromFinnhub(symbol);
             
             if (!quoteData) {
+              quoteData = await fetchFromTwelveData(symbol);
+            }
+            
+            if (!quoteData) {
+              quoteData = await fetchFromFMP(symbol);
+            }
+            
+            if (!quoteData) {
               quoteData = await fetchFromYahoo(symbol);
+            }
+            
+            if (!quoteData) {
+              quoteData = await fetchFromPolygon(symbol);
             }
             
             if (!quoteData && alphaVantageKey) {
@@ -252,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch real crypto data from CoinGecko (completely free)
       try {
         const cryptoResponse = await fetch(
-          'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=false&price_change_percentage=1h,24h,7d',
+          'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d',
           { headers: { 'User-Agent': 'StockVue/1.0' } }
         );
         

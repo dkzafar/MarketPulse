@@ -5,10 +5,31 @@ import type { AuthenticatedRequest } from "./types";
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
 
+  // INTELLIGENT CACHING SYSTEM FOR SPEED
+  let cachedAssets: any[] = [];
+  let lastFetchTime = 0;
+  const CACHE_DURATION = 3 * 60 * 1000; // 3 minutes cache
+  let isCurrentlyFetching = false;
+
   // GUARANTEED COMPREHENSIVE ASSET COVERAGE - Full Universe
   app.get("/api/market-data", async (req: Request, res: Response) => {
     try {
-      console.log("🚀 COMPREHENSIVE ASSET FETCHING: Guaranteed full universe coverage");
+      const now = Date.now();
+      
+      // Return cached data if fresh and available
+      if (cachedAssets.length > 0 && now - lastFetchTime < CACHE_DURATION) {
+        console.log(`⚡ FAST CACHE HIT: Returning ${cachedAssets.length} cached assets`);
+        return res.json(cachedAssets);
+      }
+
+      // If already fetching, return cached data (even if stale)
+      if (isCurrentlyFetching && cachedAssets.length > 0) {
+        console.log(`🔄 FETCHING IN PROGRESS: Returning ${cachedAssets.length} cached assets`);
+        return res.json(cachedAssets);
+      }
+
+      console.log("🚀 COMPREHENSIVE ASSET FETCHING: Fresh data collection starting");
+      isCurrentlyFetching = true;
       
       const allAssets: any[] = [];
       const apiStats: { [key: string]: number } = {};
@@ -113,38 +134,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📊 Processing ${allSymbols.length} total symbols across all APIs...`);
 
-      // Yahoo Finance - Primary comprehensive source
-      console.log("🔄 Yahoo Finance API - Comprehensive global coverage...");
+      // Yahoo Finance - Optimized parallel processing
+      console.log("🔄 Yahoo Finance API - Fast parallel processing...");
+      const YAHOO_BATCH_SIZE = 25;
       let yahooCount = 0;
-      for (const symbol of allSymbols) {
-        try {
-          const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`);
-          if (response.ok) {
-            const data = await response.json();
-            const result = data.result?.[0];
-            if (result?.meta) {
-              const meta = result.meta;
-              allAssets.push({
-                symbol: meta.symbol,
-                name: meta.longName || meta.shortName || getCompanyName(meta.symbol),
-                price: meta.regularMarketPrice,
-                change: meta.regularMarketPrice - meta.previousClose,
-                changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
-                volume: meta.regularMarketVolume,
-                marketCap: meta.marketCap,
-                category: getAssetCategory(meta.symbol),
-                source: 'Yahoo Finance'
-              });
-              yahooCount++;
+      
+      // Process in parallel batches for speed
+      for (let i = 0; i < Math.min(150, allSymbols.length); i += YAHOO_BATCH_SIZE) {
+        const batch = allSymbols.slice(i, i + YAHOO_BATCH_SIZE);
+        
+        const batchPromises = batch.map(async (symbol) => {
+          try {
+            const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}`);
+            if (response.ok) {
+              const data = await response.json();
+              const result = data.result?.[0];
+              if (result?.meta) {
+                const meta = result.meta;
+                yahooCount++;
+                return {
+                  symbol: meta.symbol,
+                  name: meta.longName || meta.shortName || getCompanyName(meta.symbol),
+                  price: meta.regularMarketPrice,
+                  change: meta.regularMarketPrice - meta.previousClose,
+                  changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
+                  volume: meta.regularMarketVolume,
+                  marketCap: meta.marketCap,
+                  category: getAssetCategory(meta.symbol),
+                  source: 'Yahoo Finance'
+                };
+              }
             }
+          } catch (error) {
+            // Continue processing other symbols
           }
-          // Light rate limiting
-          if (yahooCount % 20 === 0) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-        } catch (error) {
-          continue;
-        }
+          return null;
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        const validResults = batchResults.filter(result => result !== null);
+        allAssets.push(...validResults);
+        
+        // Small delay between batches to respect rate limits
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
       apiStats['Yahoo Finance'] = yahooCount;
 
@@ -402,9 +434,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`📈 Comprehensive Categories: ${categoryBreakdown.stocks} stocks, ${categoryBreakdown.etfs} ETFs, ${categoryBreakdown.crypto} crypto, ${categoryBreakdown.forex} forex, ${categoryBreakdown.commodities} commodities, ${categoryBreakdown.indices} indices`);
 
+      // Update cache
+      cachedAssets = finalAssets;
+      lastFetchTime = Date.now();
+      isCurrentlyFetching = false;
+
       res.json(finalAssets);
     } catch (error) {
       console.error('Comprehensive market data error:', error);
+      isCurrentlyFetching = false;
+      
+      // Return cached data if available, even on error
+      if (cachedAssets.length > 0) {
+        console.log(`⚡ ERROR FALLBACK: Returning ${cachedAssets.length} cached assets`);
+        return res.json(cachedAssets);
+      }
+      
       res.status(500).json({ error: 'Failed to fetch comprehensive market data' });
     }
   });

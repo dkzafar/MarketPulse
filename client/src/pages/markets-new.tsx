@@ -47,8 +47,8 @@ export default function MarketsPage() {
       if (!response.ok) throw new Error('Failed to fetch market data');
       return response.json();
     },
-    staleTime: 5000,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
+    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes for better performance
   });
 
   // Smart filtering and sorting logic

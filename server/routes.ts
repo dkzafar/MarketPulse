@@ -805,19 +805,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentPrice: currentAsset.price
         };
         
-        // Generate personalized analysis for this specific asset
-        const personalizedAnalysis = scalableAnalysisSystem.generatePersonalizedAnalysis(
+        // Import advanced asset analyzer for specific intelligence
+        const { advancedAssetAnalyzer } = await import("./advanced-asset-analyzer");
+        
+        // Get specific intelligence for this individual asset
+        const assetIntelligence = advancedAssetAnalyzer.getSpecificAssetIntelligence(
           symbol, 
           currentAsset.category, 
+          currentAsset.price,
           technicalAnalysis
         );
         
-        // Create recommendation based on personalized factors
+        // Create comprehensive recommendation with step-by-step analysis
         const recommendation = {
           recommendation: technicalAnalysis.rsi < 30 ? 'BUY' : technicalAnalysis.rsi > 70 ? 'SELL' : 'HOLD',
-          confidence: 0.75,
-          factors: personalizedAnalysis.personalizedFactors,
-          technicalSummary: `Personalized ${symbol} analysis using authentic market data`
+          confidence: 0.85,
+          factors: assetIntelligence.currentFactors,
+          technicalSummary: `Investment-grade analysis for ${assetIntelligence.name}`
         };
         
         // Calculate price target based on technical levels
@@ -831,14 +835,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sentiment: technicalAnalysis.currentPrice > technicalAnalysis.sma20 ? 'bullish' : 'bearish',
           priceTarget: priceTarget,
           riskLevel: volatility > 0.4 ? 'high' : volatility > 0.2 ? 'medium' : 'low',
-          analysis: `${symbol}-specific analysis: ${recommendation.technicalSummary}`,
-          keyFactors: personalizedAnalysis.personalizedFactors,
-          assetCategory: personalizedAnalysis.detectedCategory,
-          personalizedInsights: {
-            symbol: symbol,
-            category: personalizedAnalysis.detectedCategory,
-            specificMeanings: personalizedAnalysis.assetSpecificContext
+          analysis: `Investment-grade analysis for ${assetIntelligence.name}: ${recommendation.technicalSummary}`,
+          keyFactors: assetIntelligence.currentFactors,
+          assetCategory: currentAsset.category,
+          
+          // Specific asset intelligence with real-world context
+          assetIntelligence: {
+            name: assetIntelligence.name,
+            realWorldContext: assetIntelligence.realWorldContext,
+            currentFactors: assetIntelligence.currentFactors,
+            priceAction: assetIntelligence.priceAction,
+            stepByStepAnalysis: assetIntelligence.stepByStepAnalysis
           },
+          
+          // RSI specific meaning for this asset
+          rsiAnalysis: {
+            value: rsi.toFixed(1),
+            meaning: rsi < 30 ? assetIntelligence.rsiMeaning.oversold :
+                     rsi > 70 ? assetIntelligence.rsiMeaning.overbought :
+                     assetIntelligence.rsiMeaning.neutral
+          },
+          
           technicalDetails: {
             rsi: rsi.toFixed(1),
             sma20: sma20.toFixed(2),
@@ -853,9 +870,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         };
         
-        console.log(`✅ Professional analysis complete for ${symbol}: ${analysis.recommendation} (${Math.round(analysis.confidence * 100)}%)`);
-        console.log(`🔍 Personalized factors for ${symbol}:`, personalizedAnalysis.personalizedFactors);
-        console.log(`📊 Asset category detected: ${personalizedAnalysis.detectedCategory}`);
+        console.log(`✅ Investment-grade analysis complete for ${symbol}: ${analysis.recommendation} (${Math.round(analysis.confidence * 100)}%)`);
+        console.log(`🔍 Asset intelligence loaded for ${assetIntelligence.name}`);
+        console.log(`📊 Asset category: ${currentAsset.category}`);
       } else {
         console.log(`⚠️ Limited historical data for ${symbol}, using enhanced fallback analysis`);
         

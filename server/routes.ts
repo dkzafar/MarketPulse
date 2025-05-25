@@ -757,10 +757,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'Symbol is required' });
       }
       
+      // PRIORITY: Handle Bitcoin with dedicated crypto-specific analysis
+      if (symbol === 'BTC') {
+        const { generateBitcoinAnalysis } = await import("./bitcoin-analysis");
+        return generateBitcoinAnalysis(req, res);
+      }
+      
       console.log(`🔍 AI Analysis Request: ${symbol} at $${price}`);
       
-      // Determine asset category for specialized analysis
-      const assetCategory = symbol === 'BTC' || symbol === 'ETH' || symbol.includes('USDT') ? 'crypto' : 
+      // Determine asset category for other assets
+      const assetCategory = symbol === 'ETH' || symbol.includes('USDT') ? 'crypto' : 
                            symbol.includes('USD') || symbol.includes('EUR') || symbol.includes('/') ? 'forex' :
                            'stocks';
       

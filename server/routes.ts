@@ -1103,73 +1103,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // If no AI services available, use intelligent professional analysis
-      
-      // Enhanced analysis with professional trading recommendations
-      const rsi = Math.round(30 + Math.random() * 40);
-      const volatility = Math.abs(changePercent || 0);
-      
-      // Professional trading signal logic
-      const isOversold = rsi < 30;
-      const isOverbought = rsi > 70;
-      const strongMomentum = Math.abs(changePercent || 0) > 3;
-      
-      let tradingSignal = 'HOLD';
-      let signalStrength = 0;
-      let expectedReturn = 0;
-      
-      if (isOversold && (changePercent || 0) < -2) {
-        tradingSignal = 'STRONG BUY';
-        signalStrength = 85;
-        expectedReturn = 8.5;
-      } else if (rsi < 40 && (changePercent || 0) > 1) {
-        tradingSignal = 'BUY';
-        signalStrength = 72;
-        expectedReturn = 5.2;
-      } else if (isOverbought && (changePercent || 0) > 3) {
-        tradingSignal = 'SELL';
-        signalStrength = 78;
-        expectedReturn = -4.1;
-      } else if (rsi > 60 && (changePercent || 0) < -1) {
-        tradingSignal = 'WEAK SELL';
-        signalStrength = 65;
-        expectedReturn = -2.3;
-      } else {
-        signalStrength = 45;
-        expectedReturn = 1.2;
+      // If no external AI services available, ensure we return our detailed analysis
+      // (analysis should already be set from our comprehensive asset intelligence above)
+      if (!analysis) {
+        // This should not happen as we always generate analysis above
+        console.log('⚠️ No analysis generated - this should not occur');
+        analysis = {
+          recommendation: 'HOLD',
+          confidence: 0.5,
+          analysis: 'Analysis generation failed'
+        };
       }
-
-      const sentiment = tradingSignal.includes('BUY') ? 'bullish' : tradingSignal.includes('SELL') ? 'bearish' : 'neutral';
-      const riskLevel = volatility > 5 ? 'high' : volatility > 2 ? 'medium' : 'low';
       
+      // Return our detailed asset intelligence analysis
       res.json({
-        analysis: {
-          sentiment,
-          confidence: signalStrength,
-          tradingRecommendation: tradingSignal,
-          expectedReturn,
-          riskLevel,
-          positionSize: riskLevel === 'low' ? '3-5%' : riskLevel === 'medium' ? '2-3%' : '1-2%',
-          technicalIndicators: {
-            rsi,
-            rsiSignal: rsi < 30 ? 'oversold' : rsi > 70 ? 'overbought' : 'neutral',
-            volatility: volatility.toFixed(2) + '%',
-            momentum: strongMomentum ? 'strong' : 'moderate'
-          },
-          priceTargets: {
-            stopLoss: tradingSignal.includes('BUY') ? (price * 0.92).toFixed(2) : (price * 1.08).toFixed(2),
-            takeProfit: tradingSignal.includes('BUY') ? (price * 1.12).toFixed(2) : (price * 0.88).toFixed(2),
-            target1Week: (price * (1 + expectedReturn * 0.6 / 100)).toFixed(2)
-          },
-          keyInsights: [
-            `${tradingSignal} signal with ${signalStrength}% confidence`,
-            `RSI at ${rsi} indicates ${rsi < 30 ? 'oversold' : rsi > 70 ? 'overbought' : 'neutral'} conditions`,
-            `Expected return: ${expectedReturn > 0 ? '+' : ''}${expectedReturn}% over 1-2 weeks`,
-            `Risk assessment: ${riskLevel.toUpperCase()}`
-          ]
-        },
+        success: true,
+        analysis,
         timestamp: new Date().toISOString(),
-        disclaimer: "Professional-grade analysis for educational purposes. Not financial advice."
+        provider: aiProvider,
+        disclaimer: "Investment-grade analysis for educational purposes. Not financial advice."
       });
 
     } catch (error) {

@@ -750,6 +750,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // AI market analysis endpoint with professional-grade calculations
   app.post("/api/ai-market-analysis", async (req: Request, res: Response) => {
+    // Use clean analysis system for detailed asset intelligence
+    const { handleAIAnalysis } = await import("./clean-ai-analysis");
+    return handleAIAnalysis(req, res);
+  });
+
+  app.post("/api/ai-market-analysis-backup", async (req: Request, res: Response) => {
     try {
       const { symbol, price, changePercent, volume, marketCap } = req.body;
       
@@ -833,32 +839,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
           technicalAnalysis.resistance : 
           (technicalAnalysis.support + technicalAnalysis.currentPrice) / 2;
         
+        // PRIORITY: Return comprehensive asset intelligence directly
         analysis = {
           recommendation: recommendation.recommendation,
           confidence: recommendation.confidence,
           sentiment: technicalAnalysis.currentPrice > technicalAnalysis.sma20 ? 'bullish' : 'bearish',
           priceTarget: priceTarget,
           riskLevel: volatility > 0.4 ? 'high' : volatility > 0.2 ? 'medium' : 'low',
-          analysis: `Investment-grade analysis for ${assetIntelligence.name}: ${recommendation.technicalSummary}`,
-          keyFactors: assetIntelligence.currentFactors,
-          assetCategory: currentAsset.category,
           
-          // Specific asset intelligence with real-world context
-          assetIntelligence: {
-            name: assetIntelligence.name,
-            realWorldContext: assetIntelligence.realWorldContext,
-            currentFactors: assetIntelligence.currentFactors,
-            priceAction: assetIntelligence.priceAction,
-            stepByStepAnalysis: assetIntelligence.stepByStepAnalysis
-          },
+          // Core asset intelligence (this is what shows the detailed Bitcoin analysis)
+          assetName: assetIntelligence.name,
+          realWorldContext: assetIntelligence.realWorldContext,
+          currentFactors: assetIntelligence.currentFactors,
+          priceAction: assetIntelligence.priceAction,
+          stepByStepAnalysis: assetIntelligence.stepByStepAnalysis,
           
-          // RSI specific meaning for this asset
+          // RSI meaning specific to this asset
           rsiAnalysis: {
-            value: rsi.toFixed(1),
-            meaning: rsi < 30 ? assetIntelligence.rsiMeaning.oversold :
-                     rsi > 70 ? assetIntelligence.rsiMeaning.overbought :
+            value: technicalAnalysis.rsi.toFixed(1),
+            meaning: technicalAnalysis.rsi < 30 ? assetIntelligence.rsiMeaning.oversold :
+                     technicalAnalysis.rsi > 70 ? assetIntelligence.rsiMeaning.overbought :
                      assetIntelligence.rsiMeaning.neutral
           },
+          
+          // Enhanced key factors with asset specifics
+          keyFactors: [
+            `${recommendation.recommendation} signal with ${Math.round(recommendation.confidence * 100)}% confidence`,
+            `Asset-specific analysis: ${assetIntelligence.realWorldContext}`,
+            `Category: ${currentAsset.category} - Specialized insights applied`,
+            `Technical RSI: ${technicalAnalysis.rsi.toFixed(1)} - ${technicalAnalysis.rsi < 30 ? 'Oversold' : technicalAnalysis.rsi > 70 ? 'Overbought' : 'Neutral'}`,
+            `Current factors: ${assetIntelligence.currentFactors[0]}`
+          ]
+        };
           
           technicalDetails: {
             rsi: rsi.toFixed(1),

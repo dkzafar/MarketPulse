@@ -773,15 +773,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
         resistance: price * 1.05
       };
       
-      // Import and generate comprehensive asset intelligence
-      const { advancedAssetAnalyzer } = await import("./advanced-asset-analyzer");
+      // Generate comprehensive asset intelligence directly
+      let assetIntelligence;
       
-      const assetIntelligence = advancedAssetAnalyzer.getSpecificAssetIntelligence(
-        symbol, 
-        assetCategory, 
-        price,
-        technicalData
-      );
+      if (symbol === 'BTC') {
+        // Bitcoin-specific crypto analysis with halving cycles and institutional adoption
+        assetIntelligence = {
+          name: 'Bitcoin (BTC)',
+          realWorldContext: 'Digital gold and store of value with 4-year halving cycles driving institutional adoption',
+          currentFactors: [
+            'Bitcoin halving cycle effects on scarcity and price dynamics',
+            'Institutional adoption by companies like MicroStrategy and Tesla',
+            'ETF approval impact and traditional finance integration',
+            'Regulatory developments and government acceptance trends',
+            'Macro-economic factors and inflation hedge positioning'
+          ],
+          priceAction: `Bitcoin at $${price.toLocaleString()} shows ${changePercent > 0 ? 'bullish' : 'bearish'} momentum. Post-halving cycles historically lead to significant price appreciation over 12-18 months. Current institutional flows and ETF demand creating strong support levels.`,
+          stepByStepAnalysis: [
+            {
+              step: 1,
+              title: 'Halving Cycle Analysis',
+              description: 'Bitcoin is in post-halving phase, historically bullish for 12-18 months',
+              impact: 'Positive - Supply reduction typically drives price appreciation'
+            },
+            {
+              step: 2, 
+              title: 'Institutional Adoption',
+              description: 'Major corporations and ETFs accumulating Bitcoin as treasury asset',
+              impact: 'Very Positive - Creates sustained demand and reduces selling pressure'
+            },
+            {
+              step: 3,
+              title: 'Technical Analysis',
+              description: `RSI at ${technicalData.rsi} indicates ${technicalData.rsi < 30 ? 'oversold conditions' : technicalData.rsi > 70 ? 'overbought conditions' : 'balanced momentum'}`,
+              impact: technicalData.rsi < 30 ? 'Buying opportunity' : technicalData.rsi > 70 ? 'Consider profit taking' : 'Hold current positions'
+            },
+            {
+              step: 4,
+              title: 'Market Structure',
+              description: 'Strong support from long-term holders and institutional buyers',
+              impact: 'Positive - Reduces volatility and creates price floor'
+            }
+          ],
+          rsiMeaning: {
+            oversold: `Bitcoin at RSI ${technicalData.rsi} is in oversold territory. Historically, BTC oversold conditions present excellent accumulation opportunities as institutional buyers often step in at these levels, especially post-halving.`,
+            overbought: `Bitcoin at RSI ${technicalData.rsi} shows overbought conditions. This often occurs during institutional FOMO or major adoption news. Consider taking partial profits while maintaining core position.`,
+            neutral: `Bitcoin's RSI of ${technicalData.rsi} indicates balanced momentum. This stability often precedes major moves in either direction, particularly around key resistance/support levels.`
+          }
+        };
+      } else {
+        // Import advanced analyzer for other assets
+        try {
+          const { advancedAssetAnalyzer } = await import("./advanced-asset-analyzer");
+          assetIntelligence = advancedAssetAnalyzer.getSpecificAssetIntelligence(
+            symbol, 
+            assetCategory, 
+            price,
+            technicalData
+          );
+        } catch (error) {
+          console.error(`Error loading asset analyzer: ${error}`);
+          // Fallback for other assets
+          assetIntelligence = {
+            name: symbol,
+            realWorldContext: `${assetCategory} asset with current market dynamics`,
+            currentFactors: [`Market trends affecting ${symbol}`, `Technical indicators and price action`],
+            priceAction: `${symbol} showing ${changePercent > 0 ? 'positive' : 'negative'} momentum`,
+            stepByStepAnalysis: [],
+            rsiMeaning: {
+              oversold: `${symbol} oversold at RSI ${technicalData.rsi}`,
+              overbought: `${symbol} overbought at RSI ${technicalData.rsi}`,
+              neutral: `${symbol} neutral at RSI ${technicalData.rsi}`
+            }
+          };
+        }
+      }
       
       console.log(`🎯 Generated detailed intelligence for ${symbol}:`, {
         name: assetIntelligence.name,

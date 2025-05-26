@@ -68,16 +68,16 @@ export default function NLQuery() {
 
   const nlQueryMutation = useMutation({
     mutationFn: async (data: { query: string; context: any }) => {
-      const response = await fetch('/api/nl-query', {
+      const response = await fetch('/api/simple-ai-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ query: data.query }),
       });
       
       if (!response.ok) {
-        throw new Error('Failed to process natural language query');
+        throw new Error('Failed to process AI chat query');
       }
       
       return response.json();

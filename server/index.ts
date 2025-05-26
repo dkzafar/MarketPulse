@@ -89,8 +89,8 @@ app.use((req, res, next) => {
   // Add stress testing endpoints
   app.use('/api', stressTestingRouter);
   
-  // Add natural language query endpoints (temporarily disabled due to compilation issues)
-  // app.use('/api', nlQueryRouter);
+  // Add working AI chat endpoints
+  app.use('/api', simpleAiChatRouter);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

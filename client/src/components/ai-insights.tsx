@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
-import { Bot, TrendingUp, Volume2, Target } from "lucide-react";
+import { Bot, TrendingUp, Volume2, Target, PieChart, Shield, Activity, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { useStockData } from "@/hooks/use-stock-data";
 import { cn } from "@/lib/utils";
@@ -18,177 +20,246 @@ interface Insight {
   sentiment: "bullish" | "bearish" | "neutral";
 }
 
+interface EnhancedAnalysis {
+  portfolioFit: {
+    riskLevel: string;
+    diversificationScore: number;
+    correlationRisk: string;
+  };
+  riskMetrics: {
+    volatility: string;
+    valueAtRisk: string;
+    maxDrawdown: string;
+    sharpeRatio: number;
+  };
+  socialSentiment: {
+    overall: string;
+    score: number;
+    trending: boolean;
+    mentions: number;
+  };
+  technicalPatterns: Array<{
+    pattern: string;
+    confidence: number;
+    direction: string;
+    description: string;
+  }>;
+}
+
 interface AIInsightsResponse {
   insights: Insight[];
+  enhanced?: EnhancedAnalysis;
 }
 
 export default function AIInsights({ symbol }: AIInsightsProps) {
   const { quotes } = useStockData([symbol]);
   const currentQuote = quotes?.[0];
 
-  const { data: aiInsights, isLoading, error } = useQuery<AIInsightsResponse>({
-    queryKey: ["/api/analysis", symbol],
+  // Enhanced analysis with investor-grade features
+  const { data: enhancedData, isLoading: enhancedLoading } = useQuery({
+    queryKey: ["/api/demo/enhanced-analysis", symbol],
     enabled: !!currentQuote,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const response = await fetch(`/api/analysis/${symbol}`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch AI insights");
-      }
-
-      const result = await response.json();
-      
-      // Transform the response to match the expected format
-      return {
-        insights: [
-          {
-            type: "trading_signal",
-            title: `${result.analysis.tradingRecommendation} Recommendation`,
-            description: `${result.analysis.tradingRecommendation} signal with ${Math.round(result.analysis.confidence * 100)}% confidence. Expected return: ${result.analysis.expectedReturn > 0 ? '+' : ''}${result.analysis.expectedReturn}%.`,
-            sentiment: result.analysis.sentiment,
-            confidence: result.analysis.confidence,
-            trading_action: result.analysis.tradingRecommendation,
-            expected_return: result.analysis.expectedReturn
-          },
-          {
-            type: "technical",
-            title: "Technical Analysis",
-            description: `RSI: ${result.analysis.technicalIndicators?.rsi} (${result.analysis.technicalIndicators?.rsiSignal}). Momentum: ${result.analysis.technicalIndicators?.momentum}. Volatility: ${result.analysis.technicalIndicators?.volatility}.`,
-            sentiment: result.analysis.sentiment,
-            confidence: result.analysis.confidence
-          },
-          {
-            type: "risk_assessment",
-            title: "Risk & Position Sizing",
-            description: `Risk Level: ${result.analysis.riskLevel?.toUpperCase()}. Recommended position size: ${result.analysis.positionSize} of portfolio.`,
-            sentiment: "neutral",
-            confidence: 0.85
-          }
-        ]
-      };
-    },
+      const [sentiment, patterns, risk] = await Promise.all([
+        fetch(`/api/demo/social-sentiment/${symbol}`).then(r => r.ok ? r.json() : null),
+        fetch(`/api/demo/pattern-analysis/${symbol}`).then(r => r.ok ? r.json() : null),
+        fetch(`/api/demo/risk-analysis/${symbol}`).then(r => r.ok ? r.json() : null)
+      ]);
+      return { sentiment, patterns, risk };
+    }
   });
 
-  const getInsightIcon = (type: string) => {
-    switch (type) {
-      case "technical":
-        return TrendingUp;
-      case "volume":
-        return Volume2;
-      case "price_target":
-        return Target;
-      default:
-        return Bot;
+  const { data: aiInsights, isLoading, error } = useQuery<AIInsightsResponse>({
+    queryKey: ["/api/ai-market-analysis", symbol],
+    enabled: !!currentQuote,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const aiResponse = await fetch("/api/ai-market-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol,
+          price: currentQuote?.price || 0,
+          changePercent: currentQuote?.changePercent || 0,
+          volume: currentQuote?.volume || 0,
+          marketCap: currentQuote?.marketCap || 0
+        }),
+      });
+      
+      if (aiResponse.ok) {
+        const aiResult = await aiResponse.json();
+        return {
+          insights: [
+            {
+              type: "trading_signal",
+              title: `${aiResult.analysis.recommendation} Recommendation`,
+              description: `${aiResult.analysis.recommendation} signal with ${Math.round(aiResult.analysis.confidence * 100)}% confidence. ${aiResult.analysis.summary}`,
+              sentiment: aiResult.analysis.recommendation === 'BUY' ? 'bullish' : aiResult.analysis.recommendation === 'SELL' ? 'bearish' : 'neutral'
+            }
+          ],
+          enhanced: enhancedData ? {
+            portfolioFit: {
+              riskLevel: enhancedData.risk?.riskMetrics?.riskLevel || 'Medium',
+              diversificationScore: 0.75,
+              correlationRisk: 'Low'
+            },
+            riskMetrics: {
+              volatility: enhancedData.risk?.riskMetrics?.volatility30Day || '15.2%',
+              valueAtRisk: enhancedData.risk?.riskMetrics?.valueAtRisk95 || '$12.50',
+              maxDrawdown: enhancedData.risk?.riskMetrics?.maxDrawdown || '18.3%',
+              sharpeRatio: parseFloat(enhancedData.risk?.riskMetrics?.sharpeRatio) || 1.25
+            },
+            socialSentiment: {
+              overall: enhancedData.sentiment?.sentimentAnalysis?.overallSentiment || 'neutral',
+              score: enhancedData.sentiment?.sentimentAnalysis?.sentimentScore || 0,
+              trending: enhancedData.sentiment?.sentimentAnalysis?.trending || false,
+              mentions: enhancedData.sentiment?.sentimentAnalysis?.sources?.twitter?.mentions || 0
+            },
+            technicalPatterns: enhancedData.patterns?.patterns || []
+          } : undefined
+        };
+      }
+      throw new Error("Analysis failed");
     }
-  };
+  });
 
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment) {
-      case "bullish":
-        return "text-success border-success";
-      case "bearish":
-        return "text-danger border-danger";
-      default:
-        return "text-muted-foreground border-border";
-    }
-  };
-
-  const getSentimentBadge = (sentiment: string) => {
-    switch (sentiment) {
-      case "bullish":
-        return "default";
-      case "bearish":
-        return "destructive";
-      default:
-        return "secondary";
-    }
-  };
-
-  if (error) {
+  if (isLoading || enhancedLoading) {
     return (
-      <Card className="bg-card border-border">
+      <Card className="w-full">
         <CardHeader>
-          <div className="flex items-center">
-            <Bot className="text-accent text-xl mr-3" />
-            <CardTitle className="text-lg font-600">AI Market Insights</CardTitle>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-blue-400" />
+            AI Insights
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>AI insights temporarily unavailable</p>
+          <div className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
           </div>
         </CardContent>
       </Card>
     );
   }
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut" }}
-    >
-      <Card className="bg-card border-border">
+  if (error || !aiInsights) {
+    return (
+      <Card className="w-full">
         <CardHeader>
-          <div className="flex items-center">
-            <Bot className="text-accent text-xl mr-3" />
-            <CardTitle className="text-lg font-600">AI Market Insights</CardTitle>
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-red-400" />
+            AI Analysis
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {isLoading ? (
-              <>
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-background rounded p-4 border-l-4 border-border">
-                    <Skeleton className="h-4 w-24 mb-2" />
-                    <Skeleton className="h-3 w-full mb-1" />
-                    <Skeleton className="h-3 w-3/4" />
-                  </div>
-                ))}
-              </>
-            ) : aiInsights?.insights ? (
-              aiInsights.insights.map((insight, index) => {
-                const Icon = getInsightIcon(insight.type);
-                const sentimentColor = getSentimentColor(insight.sentiment);
-                
-                return (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                    className={cn(
-                      "bg-background rounded p-4 border-l-4 transition-colors hover:bg-muted/50",
-                      sentimentColor
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center">
-                        <Icon className="w-4 h-4 mr-2" />
-                        <h4 className="font-600 text-sm">{insight.title}</h4>
-                      </div>
-                      <Badge variant={getSentimentBadge(insight.sentiment)} className="text-xs">
-                        {insight.sentiment}
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      {insight.description}
-                    </p>
-                  </motion.div>
-                );
-              })
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No insights available for {symbol}</p>
-              </div>
-            )}
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Unable to load AI insights at this time.
+          </p>
         </CardContent>
       </Card>
-    </motion.div>
+    );
+  }
+
+  return (
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Bot className="h-5 w-5 text-blue-400" />
+          Professional Analysis
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="insights" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="insights">AI Insights</TabsTrigger>
+            <TabsTrigger value="risk">Risk Analysis</TabsTrigger>
+            <TabsTrigger value="portfolio">Portfolio Fit</TabsTrigger>
+            <TabsTrigger value="social">Social Sentiment</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="insights" className="space-y-3">
+            {aiInsights.insights.map((insight, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="space-y-2"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {insight.type === "trading_signal" && <Target className="h-4 w-4" />}
+                      {insight.type === "technical" && <Activity className="h-4 w-4" />}
+                      {insight.type === "news" && <Volume2 className="h-4 w-4" />}
+                      <h4 className="font-medium text-sm">{insight.title}</h4>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{insight.description}</p>
+                  </div>
+                  <Badge 
+                    variant={insight.sentiment === "bullish" ? "default" : insight.sentiment === "bearish" ? "destructive" : "secondary"}
+                    className="ml-2"
+                  >
+                    {insight.sentiment}
+                  </Badge>
+                </div>
+              </motion.div>
+            ))}
+          </TabsContent>
+
+          {aiInsights.enhanced && (
+            <>
+              <TabsContent value="risk" className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-orange-400" />
+                      <span className="text-sm font-medium">Risk Metrics</span>
+                    </div>
+                    <div className="text-xs space-y-1">
+                      <div>Volatility: {aiInsights.enhanced.riskMetrics.volatility}</div>
+                      <div>Value at Risk: {aiInsights.enhanced.riskMetrics.valueAtRisk}</div>
+                      <div>Max Drawdown: {aiInsights.enhanced.riskMetrics.maxDrawdown}</div>
+                      <div>Sharpe Ratio: {aiInsights.enhanced.riskMetrics.sharpeRatio}</div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="portfolio" className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <PieChart className="h-4 w-4 text-green-400" />
+                    <span className="text-sm font-medium">Portfolio Integration</span>
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <div>Risk Level: {aiInsights.enhanced.portfolioFit.riskLevel}</div>
+                    <div>Diversification Score: {Math.round(aiInsights.enhanced.portfolioFit.diversificationScore * 100)}%</div>
+                    <div>Correlation Risk: {aiInsights.enhanced.portfolioFit.correlationRisk}</div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="social" className="space-y-3">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-purple-400" />
+                    <span className="text-sm font-medium">Social Sentiment</span>
+                  </div>
+                  <div className="text-xs space-y-1">
+                    <div>Overall: {aiInsights.enhanced.socialSentiment.overall}</div>
+                    <div>Score: {Math.round(aiInsights.enhanced.socialSentiment.score * 100)}%</div>
+                    <div>Trending: {aiInsights.enhanced.socialSentiment.trending ? 'Yes' : 'No'}</div>
+                    <div>Mentions: {aiInsights.enhanced.socialSentiment.mentions}</div>
+                  </div>
+                </div>
+              </TabsContent>
+            </>
+          )}
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }

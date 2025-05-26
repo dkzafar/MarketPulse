@@ -81,9 +81,9 @@ export function calcVaRParametric(returns: number[], confidence: number): number
   const zScore = zScores[confidence] || -1.645;
   
   // VaR = mean + z-score * standard deviation (negative z-score for losses)
-  const var = -(mean + zScore * stdDev);
+  const valueAtRisk = -(mean + zScore * stdDev);
   
-  return Math.max(0, var); // Return positive loss amount
+  return Math.max(0, valueAtRisk); // Return positive loss amount
 }
 
 /**

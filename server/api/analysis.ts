@@ -3,6 +3,7 @@ import { fetchNewsSentiment } from '../services/news';
 import { computeIndicators }   from '../services/ta';
 import { aiSummarise }         from '../services/ai';
 import { getCachedAssetData }  from '../services/cache';
+import { verifySummary } from '../services/validation';
 
 const router = Router();
 
@@ -24,8 +25,11 @@ router.get('/analysis/:symbol', async (req, res) => {
   // Call the free LLM
   const summary = await aiSummarise(payload);
 
-  // Always fresh—no cache write
-  res.json(summary);
+  // 4a) Verify and annotate
+  const verified = verifySummary(assetData, summary);
+
+  // 4b) Return the augmented summary
+  res.json(verified);
 });
 
 export default router;

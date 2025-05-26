@@ -1,258 +1,131 @@
-/**
- * Professional Backtesting Engine
- * Validates trading strategies with authentic market data
- */
-
-export interface OHLCVData {
-  date: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-}
-
-export interface TradingSignal {
-  date: string;
-  symbol: string;
-  action: 'BUY' | 'SELL';
-  price: number;
-}
-
-export interface BacktestParams {
-  initialCapital: number;
-  slippagePercent: number; // e.g., 0.1 for 0.1%
-  commissionPerTrade: number; // fixed commission per trade
-  maxPositionSize?: number; // optional position sizing limit
-}
-
-export interface BacktestResult {
-  totalReturn: number; // percentage
-  annualizedReturn: number; // percentage
-  sharpeRatio: number;
-  maxDrawdown: number; // percentage
-  winRate: number; // percentage
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  averageWin: number;
-  averageLoss: number;
-  profitFactor: number;
-  equity: number[];
-  trades: Trade[];
-}
-
-interface Trade {
-  entryDate: string;
-  exitDate: string;
-  entryPrice: number;
-  exitPrice: number;
-  quantity: number;
-  profit: number;
-  profitPercent: number;
-  duration: number; // days
-}
+import { AssetOHLC, Signal, BacktestMetrics } from '../types';
 
 export function runBacktest(
-  ohlcv: OHLCVData[],
-  signals: TradingSignal[],
-  params: BacktestParams
-): BacktestResult {
-  const {
-    initialCapital,
-    slippagePercent,
-    commissionPerTrade,
-    maxPositionSize = 1.0
-  } = params;
+  ohlcv: AssetOHLC[], 
+  signals: Signal[], 
+  params: { slippagePct: number; commissionPct: number }
+): BacktestMetrics {
+  
+  if (ohlcv.length < 2 || signals.length === 0) {
+    return {
+      totalReturn: 0,
+      annualizedReturn: 0,
+      sharpeRatio: 0,
+      maxDrawdown: 0,
+      winRate: 0,
+      totalTrades: 0
+    };
+  }
 
-  let capital = initialCapital;
-  let position = 0; // shares held
-  let equity = [initialCapital];
-  const trades: Trade[] = [];
-  let currentTrade: Partial<Trade> | null = null;
+  let portfolio = 10000; // Starting with $10,000
+  let position = 0; // Number of shares held
+  let cash = portfolio;
+  let trades: { entry: number; exit: number; return: number }[] = [];
+  let portfolioValues: number[] = [];
+  let inPosition = false;
+  let entryPrice = 0;
 
-  // Sort data and signals by date
-  const sortedOHLCV = [...ohlcv].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  const sortedSignals = [...signals].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  // Create date-indexed OHLCV map for quick lookup
-  const ohlcvMap = new Map<string, OHLCVData>();
-  sortedOHLCV.forEach(candle => {
-    ohlcvMap.set(candle.date, candle);
+  // Create price map for quick lookup
+  const priceMap = new Map<string, AssetOHLC>();
+  ohlcv.forEach(candle => {
+    priceMap.set(candle.date, candle);
   });
 
   // Process each signal
-  for (const signal of sortedSignals) {
-    const signalDate = new Date(signal.date);
+  for (const signal of signals) {
+    const signalDate = signal.date.split('T')[0]; // Get date part only
+    const candle = priceMap.get(signalDate);
     
-    // Find next trading day after signal
-    const nextTradingDay = findNextTradingDay(sortedOHLCV, signalDate);
-    if (!nextTradingDay) continue;
+    if (!candle) continue;
 
-    const executionPrice = calculateExecutionPrice(nextTradingDay.open, signal.action, slippagePercent);
-
-    if (signal.action === 'BUY' && position === 0) {
+    const executePrice = candle.open * (1 + (Math.random() - 0.5) * params.slippagePct / 100);
+    
+    if (signal.action === 'BUY' && !inPosition && cash > 0) {
       // Enter long position
-      const availableCapital = capital - commissionPerTrade;
-      const maxShares = Math.floor(availableCapital / executionPrice);
-      const positionShares = Math.min(maxShares, Math.floor(availableCapital * maxPositionSize / executionPrice));
+      const commission = cash * params.commissionPct / 100;
+      const investAmount = cash - commission;
+      position = investAmount / executePrice;
+      cash = 0;
+      entryPrice = executePrice;
+      inPosition = true;
       
-      if (positionShares > 0) {
-        position = positionShares;
-        capital -= (positionShares * executionPrice + commissionPerTrade);
-        
-        currentTrade = {
-          entryDate: nextTradingDay.date,
-          entryPrice: executionPrice,
-          quantity: positionShares
-        };
-      }
-    } else if (signal.action === 'SELL' && position > 0 && currentTrade) {
-      // Exit long position
-      const proceeds = position * executionPrice - commissionPerTrade;
-      capital += proceeds;
+    } else if (signal.action === 'SELL' && inPosition) {
+      // Exit position
+      const sellValue = position * executePrice;
+      const commission = sellValue * params.commissionPct / 100;
+      cash = sellValue - commission;
       
-      const profit = proceeds - (currentTrade.quantity! * currentTrade.entryPrice! + commissionPerTrade);
-      const profitPercent = (profit / (currentTrade.quantity! * currentTrade.entryPrice!)) * 100;
-      const duration = Math.ceil((new Date(nextTradingDay.date).getTime() - new Date(currentTrade.entryDate!).getTime()) / (1000 * 60 * 60 * 24));
-
-      const completedTrade: Trade = {
-        entryDate: currentTrade.entryDate!,
-        exitDate: nextTradingDay.date,
-        entryPrice: currentTrade.entryPrice!,
-        exitPrice: executionPrice,
-        quantity: currentTrade.quantity!,
-        profit,
-        profitPercent,
-        duration
-      };
-
-      trades.push(completedTrade);
+      const tradeReturn = (cash - 10000) / 10000;
+      trades.push({
+        entry: entryPrice,
+        exit: executePrice,
+        return: tradeReturn
+      });
+      
       position = 0;
-      currentTrade = null;
+      inPosition = false;
     }
-
-    // Calculate current equity (capital + position value)
-    const currentEquity = capital + (position * nextTradingDay.close);
-    equity.push(currentEquity);
+    
+    // Calculate current portfolio value
+    const currentValue = cash + (position * candle.close);
+    portfolioValues.push(currentValue);
   }
 
-  // Calculate performance metrics
-  return calculatePerformanceMetrics(initialCapital, equity, trades);
-}
-
-function findNextTradingDay(ohlcv: OHLCVData[], signalDate: Date): OHLCVData | null {
-  const nextDay = new Date(signalDate);
-  nextDay.setDate(nextDay.getDate() + 1);
-  
-  for (const candle of ohlcv) {
-    const candleDate = new Date(candle.date);
-    if (candleDate >= nextDay) {
-      return candle;
-    }
+  // If still in position at end, close it
+  if (inPosition && ohlcv.length > 0) {
+    const lastPrice = ohlcv[ohlcv.length - 1].close;
+    const sellValue = position * lastPrice;
+    const commission = sellValue * params.commissionPct / 100;
+    cash = sellValue - commission;
+    
+    const tradeReturn = (cash - 10000) / 10000;
+    trades.push({
+      entry: entryPrice,
+      exit: lastPrice,
+      return: tradeReturn
+    });
   }
-  return null;
-}
 
-function calculateExecutionPrice(price: number, action: 'BUY' | 'SELL', slippagePercent: number): number {
-  const slippage = price * (slippagePercent / 100);
-  return action === 'BUY' ? price + slippage : price - slippage;
-}
-
-function calculatePerformanceMetrics(initialCapital: number, equity: number[], trades: Trade[]): BacktestResult {
-  const finalEquity = equity[equity.length - 1];
-  const totalReturn = ((finalEquity - initialCapital) / initialCapital) * 100;
+  // Calculate metrics
+  const finalValue = cash + (position * (ohlcv[ohlcv.length - 1]?.close || 0));
+  const totalReturn = (finalValue - portfolio) / portfolio;
   
-  // Calculate annualized return (assuming daily equity updates)
-  const days = equity.length - 1;
-  const years = days / 365.25;
-  const annualizedReturn = years > 0 ? (Math.pow(finalEquity / initialCapital, 1 / years) - 1) * 100 : 0;
-
-  // Calculate Sharpe ratio
-  const returns = equity.slice(1).map((value, i) => (value - equity[i]) / equity[i]);
-  const avgReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
-  const returnStd = Math.sqrt(returns.reduce((sum, ret) => sum + Math.pow(ret - avgReturn, 2), 0) / returns.length);
-  const sharpeRatio = returnStd > 0 ? (avgReturn / returnStd) * Math.sqrt(252) : 0; // Annualized
-
-  // Calculate max drawdown
+  // Annualized return calculation
+  const dayCount = ohlcv.length;
+  const years = dayCount / 252; // Assuming 252 trading days per year
+  const annualizedReturn = years > 0 ? Math.pow(1 + totalReturn, 1 / years) - 1 : 0;
+  
+  // Sharpe ratio calculation
+  const returns = portfolioValues.map((value, i) => 
+    i > 0 ? (value - portfolioValues[i - 1]) / portfolioValues[i - 1] : 0
+  ).slice(1);
+  
+  const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
+  const returnStd = Math.sqrt(
+    returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length
+  );
+  const sharpeRatio = returnStd > 0 ? (avgReturn * Math.sqrt(252)) / (returnStd * Math.sqrt(252)) : 0;
+  
+  // Max drawdown calculation
+  let peak = portfolio;
   let maxDrawdown = 0;
-  let peak = equity[0];
-  for (const value of equity) {
+  
+  portfolioValues.forEach(value => {
     if (value > peak) peak = value;
-    const drawdown = ((peak - value) / peak) * 100;
+    const drawdown = (peak - value) / peak;
     if (drawdown > maxDrawdown) maxDrawdown = drawdown;
-  }
-
-  // Calculate trade statistics
-  const winningTrades = trades.filter(trade => trade.profit > 0);
-  const losingTrades = trades.filter(trade => trade.profit < 0);
-  const winRate = trades.length > 0 ? (winningTrades.length / trades.length) * 100 : 0;
+  });
   
-  const averageWin = winningTrades.length > 0 
-    ? winningTrades.reduce((sum, trade) => sum + trade.profit, 0) / winningTrades.length 
-    : 0;
-  
-  const averageLoss = losingTrades.length > 0 
-    ? Math.abs(losingTrades.reduce((sum, trade) => sum + trade.profit, 0) / losingTrades.length)
-    : 0;
-  
-  const profitFactor = averageLoss > 0 ? averageWin / averageLoss : 0;
+  // Win rate calculation
+  const winningTrades = trades.filter(trade => trade.return > 0).length;
+  const winRate = trades.length > 0 ? winningTrades / trades.length : 0;
 
   return {
-    totalReturn,
-    annualizedReturn,
+    totalReturn: totalReturn * 100, // Convert to percentage
+    annualizedReturn: annualizedReturn * 100,
     sharpeRatio,
-    maxDrawdown,
-    winRate,
-    totalTrades: trades.length,
-    winningTrades: winningTrades.length,
-    losingTrades: losingTrades.length,
-    averageWin,
-    averageLoss,
-    profitFactor,
-    equity,
-    trades
+    maxDrawdown: maxDrawdown * 100,
+    winRate: winRate * 100,
+    totalTrades: trades.length
   };
-}
-
-// Example usage and test data
-export const sampleBTCData: OHLCVData[] = [
-  { date: '2024-01-01', open: 42000, high: 43000, low: 41500, close: 42500, volume: 1000000 },
-  { date: '2024-01-02', open: 42500, high: 44000, low: 42000, close: 43200, volume: 1200000 },
-  { date: '2024-01-03', open: 43200, high: 43800, low: 42800, close: 43500, volume: 950000 },
-  { date: '2024-01-04', open: 43500, high: 45000, low: 43000, close: 44800, volume: 1300000 },
-  { date: '2024-01-05', open: 44800, high: 45500, low: 44200, close: 45000, volume: 1100000 },
-  { date: '2024-01-08', open: 45000, high: 46000, low: 44500, close: 45800, volume: 1400000 },
-  { date: '2024-01-09', open: 45800, high: 47000, low: 45200, close: 46500, volume: 1600000 },
-  { date: '2024-01-10', open: 46500, high: 46800, low: 45800, close: 46200, volume: 1000000 },
-];
-
-export const sampleSignals: TradingSignal[] = [
-  { date: '2024-01-01', symbol: 'BTC', action: 'BUY', price: 42000 },
-  { date: '2024-01-05', symbol: 'BTC', action: 'SELL', price: 45000 },
-  { date: '2024-01-08', symbol: 'BTC', action: 'BUY', price: 45800 },
-  { date: '2024-01-10', symbol: 'BTC', action: 'SELL', price: 46200 },
-];
-
-// Jest test example
-export function testBacktestEngine() {
-  const params: BacktestParams = {
-    initialCapital: 10000,
-    slippagePercent: 0.1,
-    commissionPerTrade: 10,
-    maxPositionSize: 0.95
-  };
-
-  const result = runBacktest(sampleBTCData, sampleSignals, params);
-  
-  console.log('Backtest Results:');
-  console.log(`Total Return: ${result.totalReturn.toFixed(2)}%`);
-  console.log(`Annualized Return: ${result.annualizedReturn.toFixed(2)}%`);
-  console.log(`Sharpe Ratio: ${result.sharpeRatio.toFixed(2)}`);
-  console.log(`Max Drawdown: ${result.maxDrawdown.toFixed(2)}%`);
-  console.log(`Win Rate: ${result.winRate.toFixed(2)}%`);
-  console.log(`Total Trades: ${result.totalTrades}`);
-  console.log(`Profit Factor: ${result.profitFactor.toFixed(2)}`);
-  
-  return result;
 }

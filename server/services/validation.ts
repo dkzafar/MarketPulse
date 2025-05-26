@@ -1,45 +1,77 @@
-import { AssetData, AISummary } from '../types';  // adjust these imports to match your types
+import { AssetData, AISummary } from '../types';
 
-/** Validates and (if necessary) overrides the AI's summary */
 export function verifySummary(assetData: AssetData, summary: AISummary): AISummary & { validation: any } {
-  const { ohlcv, assetClass } = assetData;
-  const closes = ohlcv.map(c => c.close);
-  const latest = closes[closes.length - 1];
-
-  // 1) Recommendation vs. SMA trend
-  const sma50 = summary.extraIndicators.sma50;
-  const sma200 = summary.extraIndicators.sma200 || null;  // if you compute 200-day as well
-  let recCheck = true;
-  if (summary.signal === 'BUY' && latest < sma50) recCheck = false;
-  if (summary.signal === 'SELL' && latest > sma50) recCheck = false;
-  if (summary.signal === 'HOLD' && (latest > sma50 && latest > sma200)) recCheck = false;
-
-  // 2) RSI consistency
-  const rsi = summary.indicators.RSI;
-  let rsiCheck = true;
-  if (rsi < 30 && summary.signal !== 'BUY') rsiCheck = false;
-  if (rsi > 70 && summary.signal !== 'SELL') rsiCheck = false;
-
-  // 3) Volatility vs. risk label
-  const returns = closes.slice(-30).map((v,i,a) => i>0? (v - a[i-1])/a[i-1] : 0).slice(1);
-  const vol30 = Math.sqrt(returns.map(r => r*r).reduce((a,b)=>a+b)/returns.length) * Math.sqrt(252);
-  const riskCheck = (vol30 > 0.6 && summary.risk === 'HIGH') ||
-                    (vol30 <= 0.6 && summary.risk !== 'HIGH');
-
-  // 4) Price target sanity: within ±20% of current
-  const tgt = summary.priceTarget;
-  const tgtCheck = tgt > latest * 0.8 && tgt < latest * 1.2;
-
-  // Collect all flags
   const validation = {
-    recommendationValid: recCheck,
-    rsiValid:           rsiCheck,
-    riskValid:          riskCheck,
-    targetValid:        tgtCheck
+    signalConsistency: checkSignalConsistency(assetData, summary),
+    priceTargetReasonable: checkPriceTarget(assetData, summary),
+    riskAssessment: checkRiskAssessment(assetData, summary),
+    confidenceValid: checkConfidenceLevel(summary),
+    flags: [] as string[]
   };
 
-  // Optionally override the AI's signal if recommendationValid == false
-  // e.g. summary.signal = latest > sma50 ? 'BUY' : 'SELL';
+  // Add flags for any validation issues
+  if (!validation.signalConsistency) {
+    validation.flags.push('Signal inconsistent with technical indicators');
+  }
+  
+  if (!validation.priceTargetReasonable) {
+    validation.flags.push('Price target seems unrealistic');
+  }
+  
+  if (!validation.riskAssessment) {
+    validation.flags.push('Risk assessment may be inaccurate');
+  }
+  
+  if (!validation.confidenceValid) {
+    validation.flags.push('Confidence level outside acceptable range');
+  }
 
-  return { ...summary, validation };
+  return {
+    ...summary,
+    validation
+  };
+}
+
+function checkSignalConsistency(assetData: AssetData, summary: AISummary): boolean {
+  // Basic momentum check
+  const priceChange = assetData.changePercent;
+  
+  if (summary.signal === 'BUY' && priceChange < -5) {
+    return false; // BUY signal on strong downward momentum might be inconsistent
+  }
+  
+  if (summary.signal === 'SELL' && priceChange > 5) {
+    return false; // SELL signal on strong upward momentum might be inconsistent
+  }
+  
+  return true;
+}
+
+function checkPriceTarget(assetData: AssetData, summary: AISummary): boolean {
+  const currentPrice = assetData.price;
+  const targetPrice = summary.exitPrice;
+  
+  const percentChange = Math.abs((targetPrice - currentPrice) / currentPrice) * 100;
+  
+  // Flag if price target is more than 50% away from current price
+  return percentChange <= 50;
+}
+
+function checkRiskAssessment(assetData: AssetData, summary: AISummary): boolean {
+  const volatility = Math.abs(assetData.changePercent);
+  
+  // Check if risk profile matches volatility
+  if (summary.riskProfile === 'low' && volatility > 5) {
+    return false;
+  }
+  
+  if (summary.riskProfile === 'high' && volatility < 1) {
+    return false;
+  }
+  
+  return true;
+}
+
+function checkConfidenceLevel(summary: AISummary): boolean {
+  return summary.confidence >= 0 && summary.confidence <= 1;
 }

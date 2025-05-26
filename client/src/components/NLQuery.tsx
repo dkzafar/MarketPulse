@@ -62,7 +62,10 @@ export default function NLQuery() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: data.query }),
+        body: JSON.stringify({ 
+          query: data.query,
+          sessionId: 'user-session'
+        }),
       });
       
       if (!response.ok) {
@@ -161,24 +164,61 @@ export default function NLQuery() {
           }`}>
             <p className="text-sm leading-relaxed">{message.content}</p>
             
-            {/* Show confidence and data source for assistant messages */}
+            {/* Enhanced metadata for assistant messages */}
             {!isUser && message.confidence !== undefined && (
-              <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
-                <div className="flex items-center space-x-2">
-                  {message.confidence > 0.8 ? (
-                    <Activity className="h-3 w-3 text-green-400" />
-                  ) : message.confidence > 0.6 ? (
-                    <TrendingUp className="h-3 w-3 text-yellow-400" />
-                  ) : (
-                    <Activity className="h-3 w-3 text-red-400" />
-                  )}
+              <div className="mt-3 space-y-2">
+                {/* Recommendations section */}
+                {message.recommendations && message.recommendations.length > 0 && (
+                  <div className="bg-background/30 rounded-lg p-3 border border-border/20">
+                    <h4 className="text-xs font-600 text-foreground mb-2 flex items-center">
+                      <Star className="h-3 w-3 mr-1 text-yellow-400" />
+                      Trading Recommendations
+                    </h4>
+                    <div className="space-y-2">
+                      {message.recommendations.slice(0, 3).map((rec: any, index: number) => (
+                        <div key={index} className="flex items-center justify-between text-xs">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-600">{rec.symbol}</span>
+                            <Badge 
+                              variant={rec.action === 'BUY' ? 'default' : rec.action === 'SELL' ? 'destructive' : 'secondary'}
+                              className="text-xs py-0 px-2"
+                            >
+                              {rec.action}
+                            </Badge>
+                          </div>
+                          <span className="text-muted-foreground max-w-[60%] truncate">
+                            {rec.reason}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Confidence and metadata */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-1">
+                      {message.confidence > 0.8 ? (
+                        <Activity className="h-3 w-3 text-green-400" />
+                      ) : message.confidence > 0.6 ? (
+                        <TrendingUp className="h-3 w-3 text-yellow-400" />
+                      ) : (
+                        <Activity className="h-3 w-3 text-red-400" />
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {Math.round(message.confidence * 100)}% confidence
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-green-400">Live Data</span>
+                    </div>
+                  </div>
                   <span className="text-xs text-muted-foreground">
-                    {Math.round(message.confidence * 100)}% confidence
+                    {message.timestamp.toLocaleTimeString()}
                   </span>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {message.timestamp.toLocaleTimeString()}
-                </span>
               </div>
             )}
 

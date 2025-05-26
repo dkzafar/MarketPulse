@@ -134,18 +134,11 @@ export default function Dashboard() {
             <IndicatorsGrid symbol={selectedSymbol} />
           </motion.div>
 
-          {/* Row 4: AI Assistant & Insights */}
+          {/* Row 4: AI Insights & News */}
           <motion.div variants={itemVariants}>
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-              <div className="xl:col-span-1">
-                <NLQuery />
-              </div>
-              <div className="xl:col-span-1">
-                <AIInsights symbol={selectedSymbol} />
-              </div>
-              <div className="xl:col-span-1">
-                <NewsFeed symbol={selectedSymbol} />
-              </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <AIInsights symbol={selectedSymbol} />
+              <NewsFeed symbol={selectedSymbol} />
             </div>
           </motion.div>
 

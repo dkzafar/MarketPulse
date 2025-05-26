@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'wouter';
-import { Home, PieChart, TrendingUp, Search, User } from 'lucide-react';
+import { Home, PieChart, TrendingUp, Brain, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -23,10 +23,10 @@ const navItems = [
     label: 'Markets'
   },
   {
-    name: 'Search',
-    href: '/search',
-    icon: Search,
-    label: 'Search'
+    name: 'AI Chat',
+    href: '/ai-chat',
+    icon: Brain,
+    label: 'AI Chat'
   },
   {
     name: 'Profile',
@@ -43,7 +43,7 @@ export default function MobileNav() {
     <>
       {/* Bottom Navigation Bar (Mobile) */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t lg:hidden">
-        <div className="grid grid-cols-5 h-16">
+        <div className="grid grid-cols-4 h-16">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href || (item.href === '/dashboard' && location === '/');

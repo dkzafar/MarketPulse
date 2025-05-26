@@ -6,6 +6,7 @@ import PriceChart from "@/components/price-chart";
 import IndicatorsGrid from "@/components/indicators-grid";
 import AIInsights from "@/components/ai-insights";
 import NewsFeed from "@/components/news-feed";
+import NLQuery from "@/components/NLQuery";
 import { Button } from "@/components/ui/button";
 import { Plus, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
@@ -133,11 +134,18 @@ export default function Dashboard() {
             <IndicatorsGrid symbol={selectedSymbol} />
           </motion.div>
 
-          {/* Row 4: AI Insights & News */}
+          {/* Row 4: AI Assistant & Insights */}
           <motion.div variants={itemVariants}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AIInsights symbol={selectedSymbol} />
-              <NewsFeed symbol={selectedSymbol} />
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              <div className="xl:col-span-1">
+                <NLQuery />
+              </div>
+              <div className="xl:col-span-1">
+                <AIInsights symbol={selectedSymbol} />
+              </div>
+              <div className="xl:col-span-1">
+                <NewsFeed symbol={selectedSymbol} />
+              </div>
             </div>
           </motion.div>
 

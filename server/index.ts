@@ -6,6 +6,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import analysisRouter from './api/analysis';
 import enhancedRouter from './api/enhanced-routes';
 import demoRouter from './api/demo-enhanced';
+import patternRouter from './api/pattern-analysis';
+import sentimentRouter from './api/social-sentiment';
 
 const app = express();
 app.use(express.json());
@@ -71,6 +73,12 @@ app.use((req, res, next) => {
   
   // Add demo endpoints
   app.use('/api', demoRouter);
+  
+  // Add pattern analysis endpoints
+  app.use('/api', patternRouter);
+  
+  // Add social sentiment endpoints
+  app.use('/api', sentimentRouter);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

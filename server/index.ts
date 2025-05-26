@@ -10,7 +10,7 @@ import patternRouter from './api/pattern-analysis';
 import sentimentRouter from './api/social-sentiment';
 import portfolioOptimizationRouter from './api/portfolio-optimization';
 import stressTestingRouter from './api/stress-testing';
-import nlQueryRouter from './api/nl-query';
+import simpleAiChatRouter from './api/simple-ai-chat';
 
 const app = express();
 app.use(express.json());
@@ -89,8 +89,8 @@ app.use((req, res, next) => {
   // Add stress testing endpoints
   app.use('/api', stressTestingRouter);
   
-  // Add natural language query endpoints
-  app.use('/api', nlQueryRouter);
+  // Add natural language query endpoints (temporarily disabled due to compilation issues)
+  // app.use('/api', nlQueryRouter);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

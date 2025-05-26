@@ -148,11 +148,11 @@ function analyzeQueryIntent(query: string) {
 async function fetchRelevantMarketData(queryAnalysis: any, context: any) {
   try {
     // Use authentic market data from your comprehensive system
-      const response = await fetch('http://localhost:5000/api/market-data');
-      if (!response.ok) {
-        throw new Error(`Market data API returned ${response.status}`);
-      }
-      const allMarketData = await response.json();
+    const response = await fetch('http://localhost:5000/api/market-data');
+    if (!response.ok) {
+      throw new Error(`Market data API returned ${response.status}`);
+    }
+    const allMarketData = await response.json();
     
     if (!Array.isArray(allMarketData)) {
       return [];
@@ -172,7 +172,7 @@ async function fetchRelevantMarketData(queryAnalysis: any, context: any) {
     if (queryAnalysis.symbols.length > 0) {
       const symbolsLower = queryAnalysis.symbols.map((s: string) => s.toLowerCase());
       relevantData = relevantData.filter((asset: any) => 
-        symbolsLower.some(symbol => asset.symbol.toLowerCase().includes(symbol))
+        symbolsLower.some((symbol: string) => asset.symbol.toLowerCase().includes(symbol))
       );
     }
 
@@ -299,7 +299,7 @@ function generateFallbackResponse(query: string, marketData: any[], queryAnalysi
  * Generate actionable recommendations based on data analysis
  */
 function generateRecommendations(marketData: any[], queryAnalysis: any): any[] {
-  const recommendations = [];
+  const recommendations: any[] = [];
   
   // Performance-based recommendations
   const gainers = marketData

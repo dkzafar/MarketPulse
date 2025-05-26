@@ -124,9 +124,9 @@ export default function NLQuery() {
 
     // Prepare context from user's data
     const context = {
-      watchlist: watchlistData?.user?.watchlist || [],
-      marketData: marketData ? marketData.slice(0, 50) : [], // Limit context size
-      userId: watchlistData?.user?.id,
+      watchlist: (watchlistData as any)?.user?.watchlist || [],
+      marketData: Array.isArray(marketData) ? marketData.slice(0, 50) : [], // Limit context size
+      userId: (watchlistData as any)?.user?.id,
     };
 
     // Send query to backend

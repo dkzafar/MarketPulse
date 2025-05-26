@@ -123,13 +123,13 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
     }
   });
 
-  if (isLoading || enhancedLoading) {
+  if (isLoading) {
     return (
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-blue-400" />
-            AI Insights
+            Loading Analysis...
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -144,17 +144,20 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
   }
 
   if (error || !aiInsights) {
+    console.log('AI Insights Error:', error);
+    console.log('AI Insights Data:', aiInsights);
+    console.log('Current Quote:', currentQuote);
     return (
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-red-400" />
-            AI Analysis
+            AI Analysis Debug
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Unable to load AI insights at this time.
+            Debug: Error={error?.message}, HasData={!!aiInsights}, HasQuote={!!currentQuote}
           </p>
         </CardContent>
       </Card>

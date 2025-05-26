@@ -4,6 +4,7 @@ import MemoryStore from "memorystore";
 import { registerRoutes } from "./comprehensive-asset-system";
 import { setupVite, serveStatic, log } from "./vite";
 import analysisRouter from './api/analysis';
+import enhancedRouter from './api/enhanced-routes';
 
 const app = express();
 app.use(express.json());
@@ -63,6 +64,9 @@ app.use((req, res, next) => {
   
   // Add analysis endpoint
   app.use('/api', analysisRouter);
+  
+  // Add enhanced features
+  app.use('/api', enhancedRouter);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

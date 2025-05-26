@@ -27,23 +27,11 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
   const currentQuote = quotes?.[0];
 
   const { data: aiInsights, isLoading, error } = useQuery<AIInsightsResponse>({
-    queryKey: ["/api/ai-market-analysis", symbol],
+    queryKey: ["/api/analysis", symbol],
     enabled: !!currentQuote,
     staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
-      const response = await fetch("/api/ai-market-analysis", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          symbol,
-          price: currentQuote?.price || 0,
-          changePercent: currentQuote?.changePercent || 0,
-          volume: currentQuote?.volume || 0,
-          marketCap: currentQuote?.marketCap || 0
-        }),
-      });
+      const response = await fetch(`/api/analysis/${symbol}`);
 
       if (!response.ok) {
         throw new Error("Failed to fetch AI insights");

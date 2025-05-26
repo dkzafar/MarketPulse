@@ -1,6 +1,5 @@
 import express from 'express';
 import analysisRouter from './api/analysis';
-import demoEnhancedRouter from './api/demo-enhanced';
 
 const app = express();
 
@@ -15,7 +14,6 @@ app.get('/health', (req, res) => {
 
 // Register API routes
 app.use('/api', analysisRouter);
-app.use('/api', demoEnhancedRouter);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -107,7 +107,7 @@ async function fetchFromYahooFinance(symbol: string): Promise<AssetData | null> 
       low: quote.low[i] || 0,
       close: quote.close[i] || 0,
       volume: quote.volume[i] || 0
-    })).filter(candle => candle.close > 0);
+    })).filter((candle: AssetOHLC) => candle.close > 0);
 
     if (ohlcv.length < 2) return null;
 

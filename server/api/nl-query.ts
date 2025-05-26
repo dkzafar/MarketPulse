@@ -148,7 +148,6 @@ function analyzeQueryIntent(query: string) {
 async function fetchRelevantMarketData(queryAnalysis: any, context: any) {
   try {
     // Use authentic market data from your comprehensive system
-    try {
       const response = await fetch('http://localhost:5000/api/market-data');
       if (!response.ok) {
         throw new Error(`Market data API returned ${response.status}`);

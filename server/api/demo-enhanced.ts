@@ -10,9 +10,10 @@ const router = Router();
 // Demo: Portfolio Optimization using your real data
 router.get('/demo/portfolio-optimization', async (req, res) => {
   try {
-    // Get your real 642 assets
-    const response = await axios.get('http://localhost:5000/api/market-data');
-    const assets = response.data.slice(0, 10); // Take first 10 for demo
+    // Get your real assets
+    const response = await fetch('/api/market-data');
+    const allAssets = await response.json();
+    const assets = allAssets;
     
     // Simple portfolio optimization demo
     const portfolioWeights = assets.map((asset: any, index: number) => ({
@@ -23,10 +24,10 @@ router.get('/demo/portfolio-optimization', async (req, res) => {
     }));
     
     res.json({
-      message: "Portfolio Optimization Demo - Using Your Real 642 Assets",
-      totalAssets: response.data.length,
+      message: "Portfolio Optimization Demo - Using Your Real Assets",
+      totalAssets: allAssets.length,
       optimizedPortfolio: portfolioWeights,
-      portfolioValue: portfolioWeights.reduce((sum, w) => sum + (w.currentPrice * w.weight), 0),
+      portfolioValue: portfolioWeights.reduce((sum: number, w: any) => sum + (w.currentPrice * w.weight), 0),
       riskLevel: "Medium",
       expectedAnnualReturn: "8.5%"
     });
@@ -41,8 +42,9 @@ router.get('/demo/social-sentiment/:symbol', async (req, res) => {
     const { symbol } = req.params;
     
     // Get real asset data first
-    const response = await axios.get('http://localhost:5000/api/market-data');
-    const asset = response.data.find((a: any) => a.symbol.toUpperCase() === symbol.toUpperCase());
+    const response = await fetch('/api/market-data');
+    const allAssets = await response.json();
+    const asset = allAssets.find((a: any) => a.symbol.toUpperCase() === symbol.toUpperCase());
     
     if (!asset) {
       return res.status(404).json({ error: 'Symbol not found in your 642 assets' });

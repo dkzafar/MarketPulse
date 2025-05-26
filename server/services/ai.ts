@@ -17,11 +17,12 @@ ${JSON.stringify(data, null, 2)}
 Respond in JSON.
 `.trim();
 
-  const model = 'tiiuae/falcon-7b-instruct';
+  // Use a reliable free model that's always available
+  const model = 'gpt2';
   const output = await hf.textGeneration({
     model,
     inputs: prompt,
-    parameters: { max_new_tokens: 512, temperature: 0.3 }
+    parameters: { max_new_tokens: 256, temperature: 0.7 }
   });
 
   // Extract JSON from generated text

@@ -31,12 +31,19 @@ export interface OHLC {
 }
 
 /**
- * Detect candlestick patterns
+ * Detect candlestick patterns with error handling
  */
-export function detectCandlestickPatterns(candles: OHLC[]): PatternResult[] {
-  const patterns: PatternResult[] = [];
-  
-  if (candles.length < 3) return patterns;
+export function detectCandlestickPatterns(candles: OHLC[]): PatternResult[] | { error: string } {
+  try {
+    if (!candles || !Array.isArray(candles)) {
+      return { error: 'Invalid OHLC data provided' };
+    }
+    
+    const patterns: PatternResult[] = [];
+    
+    if (candles.length < 3) {
+      return { error: 'Insufficient data - need at least 3 candles for pattern detection' };
+    }
   
   for (let i = 2; i < candles.length; i++) {
     const current = candles[i];
@@ -107,10 +114,15 @@ export function detectCandlestickPatterns(candles: OHLC[]): PatternResult[] {
   }
   
   return patterns;
+  
+  } catch (error: any) {
+    console.error('Pattern detection error:', error.message);
+    return { error: `Pattern detection failed: ${error.message}` };
+  }
 }
 
 /**
- * Detect support and resistance levels
+ * Detect support and resistance levels with error handling
  */
 export function detectSupportResistance(candles: OHLC[], periods: number = 20): {
   support: number[];

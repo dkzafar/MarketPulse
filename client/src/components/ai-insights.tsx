@@ -47,8 +47,17 @@ interface EnhancedAnalysis {
 }
 
 interface AIInsightsResponse {
-  insights: Insight[];
+  insights?: Insight[];
   enhanced?: EnhancedAnalysis;
+  analysis?: {
+    recommendation: string;
+    confidence: number;
+    reasoning?: string;
+    priceTarget?: number;
+    riskLevel?: string;
+    sentiment?: string;
+    keyFactors?: string[];
+  };
 }
 
 export default function AIInsights({ symbol }: AIInsightsProps) {
@@ -186,28 +195,28 @@ export default function AIInsights({ symbol }: AIInsightsProps) {
                 <div className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-blue-500" />
                   <h3 className="font-semibold text-lg">
-                    {(aiInsights as any).analysis?.recommendation || "BUY"} Signal
+                    {aiInsights.analysis?.recommendation || "BUY"} Signal
                   </h3>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {Math.round(((aiInsights as any).analysis?.confidence || 0.89) * 100)}%
+                    {Math.round((aiInsights.analysis?.confidence || 0.89) * 100)}%
                   </div>
                   <div className="text-xs text-muted-foreground">Confidence</div>
                 </div>
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                {(aiInsights as any).analysis?.reasoning || "Strong bullish momentum with positive technical indicators supporting upward price movement."}
+                {aiInsights.analysis?.reasoning || "Strong bullish momentum with positive technical indicators supporting upward price movement."}
               </p>
-              {(aiInsights as any).analysis?.priceTarget && (
+              {aiInsights.analysis?.priceTarget && (
                 <div className="flex items-center gap-4 text-sm">
                   <div>
                     <span className="text-muted-foreground">Target:</span>
-                    <span className="font-semibold ml-1">${(aiInsights as any).analysis.priceTarget}</span>
+                    <span className="font-semibold ml-1">${aiInsights.analysis.priceTarget}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Risk Level:</span>
-                    <span className="font-semibold ml-1">{(aiInsights as any).analysis.riskLevel || "Medium"}</span>
+                    <span className="font-semibold ml-1">{aiInsights.analysis.riskLevel || "Medium"}</span>
                   </div>
                 </div>
               )}

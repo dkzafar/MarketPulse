@@ -8,6 +8,7 @@ import enhancedRouter from './api/enhanced-routes';
 import demoRouter from './api/demo-enhanced';
 import patternRouter from './api/pattern-analysis';
 import sentimentRouter from './api/social-sentiment';
+import portfolioOptimizationRouter from './api/portfolio-optimization';
 
 const app = express();
 app.use(express.json());
@@ -79,6 +80,9 @@ app.use((req, res, next) => {
   
   // Add social sentiment endpoints
   app.use('/api', sentimentRouter);
+  
+  // Add portfolio optimization endpoints
+  app.use('/api', portfolioOptimizationRouter);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -3,6 +3,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import { registerRoutes } from "./comprehensive-asset-system";
 import { setupVite, serveStatic, log } from "./vite";
+import analysisRouter from './api/analysis';
 
 const app = express();
 app.use(express.json());
@@ -59,6 +60,9 @@ app.use((req, res, next) => {
 (async () => {
   // Register other routes
   const server = await registerRoutes(app);
+  
+  // Add analysis endpoint
+  app.use('/api', analysisRouter);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

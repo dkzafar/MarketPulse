@@ -213,6 +213,7 @@ export default function EnhancedMarketsPage() {
       return response.json();
     },
     onSuccess: (data, symbol) => {
+      console.log('AI Analysis received:', data); // Debug log
       setSelectedAsset(prev => prev ? { ...prev, aiAnalysis: data } : null);
     }
   });
@@ -666,30 +667,34 @@ export default function EnhancedMarketsPage() {
                       <Sparkles className="h-5 w-5 mr-2 text-yellow-400" />
                       AI Market Analysis
                     </CardTitle>
+                    {/* Debug display */}
+                    <div className="text-xs text-muted-foreground">
+                      Debug: {JSON.stringify(selectedAsset.aiAnalysis, null, 2)}
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="text-center p-4 bg-background/30 rounded-lg">
                         <div className="text-2xl font-700 text-primary mb-1">
-                          {selectedAsset.aiAnalysis.analysis?.recommendation || 'HOLD'}
+                          {selectedAsset.aiAnalysis?.analysis?.recommendation || 'ANALYZING...'}
                         </div>
                         <div className="text-sm text-muted-foreground">Recommendation</div>
                       </div>
                       <div className="text-center p-4 bg-background/30 rounded-lg">
                         <div className="text-2xl font-700 text-green-400 mb-1">
-                          {selectedAsset.aiAnalysis.analysis?.confidence || 85}%
+                          {selectedAsset.aiAnalysis?.analysis?.confidence || 0}%
                         </div>
                         <div className="text-sm text-muted-foreground">Confidence</div>
                       </div>
                       <div className="text-center p-4 bg-background/30 rounded-lg">
                         <div className="text-2xl font-700 text-blue-400 mb-1">
-                          ${selectedAsset.aiAnalysis.analysis?.targetPrice || selectedAsset.price.toFixed(2)}
+                          ${selectedAsset.aiAnalysis?.analysis?.targetPrice?.toFixed(2) || selectedAsset.price.toFixed(2)}
                         </div>
                         <div className="text-sm text-muted-foreground">Target Price</div>
                       </div>
                     </div>
                     
-                    {selectedAsset.aiAnalysis.analysis?.reasoning && (
+                    {selectedAsset.aiAnalysis?.analysis?.reasoning && (
                       <div className="p-4 bg-background/30 rounded-lg">
                         <h4 className="font-600 mb-2">Analysis Reasoning:</h4>
                         <p className="text-sm text-muted-foreground leading-relaxed">

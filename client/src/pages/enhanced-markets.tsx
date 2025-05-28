@@ -34,6 +34,14 @@ interface EnhancedAsset {
   sentiment?: 'bullish' | 'bearish' | 'neutral';
   region: string;
   signal?: 'BUY' | 'SELL' | 'HOLD' | 'WATCH';
+  aiAnalysis?: {
+    analysis: {
+      recommendation: string;
+      confidence: number;
+      targetPrice: number;
+      reasoning: string;
+    };
+  };
 }
 
 export default function EnhancedMarketsPage() {
@@ -210,7 +218,11 @@ export default function EnhancedMarketsPage() {
   });
 
   const getAIAnalysis = (symbol: string) => {
-    aiAnalysisMutation.mutate(symbol);
+    const asset = enhancedMarketData.find(a => a.symbol === symbol);
+    if (asset) {
+      setSelectedAsset(asset);
+      aiAnalysisMutation.mutate(symbol);
+    }
   };
 
   // Watchlist management
@@ -647,7 +659,7 @@ export default function EnhancedMarketsPage() {
               </Card>
 
               {/* AI Analysis Results */}
-              {selectedAsset.aiAnalysis && (
+              {selectedAsset?.aiAnalysis && (
                 <Card className="bg-card/30">
                   <CardHeader>
                     <CardTitle className="flex items-center">

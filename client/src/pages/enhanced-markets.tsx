@@ -193,6 +193,26 @@ export default function EnhancedMarketsPage() {
     return 'HOLD';
   }
 
+  // AI Analysis integration
+  const aiAnalysisMutation = useMutation({
+    mutationFn: async (symbol: string) => {
+      const response = await fetch('/api/ai-market-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol })
+      });
+      if (!response.ok) throw new Error('Failed to get AI analysis');
+      return response.json();
+    },
+    onSuccess: (data, symbol) => {
+      setSelectedAsset(prev => prev ? { ...prev, aiAnalysis: data } : null);
+    }
+  });
+
+  const getAIAnalysis = (symbol: string) => {
+    aiAnalysisMutation.mutate(symbol);
+  };
+
   // Watchlist management
   const toggleWatchlist = (symbol: string) => {
     setWatchlist(prev => 
@@ -539,13 +559,22 @@ export default function EnhancedMarketsPage() {
 
                       {/* Action Buttons */}
                       <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="sm" className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/20">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/20"
+                          onClick={() => setSelectedAsset(asset)}
+                        >
                           <Plus className="h-3 w-3 mr-1" />
                           Buy
                         </Button>
-                        <Button size="sm" variant="outline" className="flex-1">
-                          <Eye className="h-3 w-3 mr-1" />
-                          Details
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => getAIAnalysis(asset.symbol)}
+                        >
+                          <Brain className="h-3 w-3 mr-1" />
+                          AI Analysis
                         </Button>
                       </div>
                     </div>
@@ -569,6 +598,162 @@ export default function EnhancedMarketsPage() {
           <p className="text-muted-foreground">Try adjusting your filters or search query</p>
         </motion.div>
       )}
+
+      {/* AI Analysis Dialog */}
+      <Dialog open={!!selectedAsset} onOpenChange={() => setSelectedAsset(null)}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Brain className="h-6 w-6 mr-2 text-purple-400" />
+              AI Analysis: {selectedAsset?.symbol}
+              {aiAnalysisMutation.isPending && (
+                <div className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"></div>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedAsset && (
+            <div className="space-y-6">
+              {/* Asset Overview */}
+              <Card className="bg-card/30">
+                <CardContent className="p-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground">Current Price</div>
+                      <div className="text-lg font-700">${selectedAsset.price.toFixed(2)}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Change</div>
+                      <div className={`text-lg font-700 ${selectedAsset.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {selectedAsset.changePercent.toFixed(2)}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Volume</div>
+                      <div className="text-lg font-700">{(selectedAsset.volume / 1000000).toFixed(1)}M</div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">AI Signal</div>
+                      <Badge variant={
+                        selectedAsset.signal === 'BUY' ? 'default' : 
+                        selectedAsset.signal === 'SELL' ? 'destructive' : 
+                        'secondary'
+                      }>
+                        {selectedAsset.signal}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* AI Analysis Results */}
+              {selectedAsset.aiAnalysis && (
+                <Card className="bg-card/30">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Sparkles className="h-5 w-5 mr-2 text-yellow-400" />
+                      AI Market Analysis
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center p-4 bg-background/30 rounded-lg">
+                        <div className="text-2xl font-700 text-primary mb-1">
+                          {selectedAsset.aiAnalysis.analysis?.recommendation || 'HOLD'}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Recommendation</div>
+                      </div>
+                      <div className="text-center p-4 bg-background/30 rounded-lg">
+                        <div className="text-2xl font-700 text-green-400 mb-1">
+                          {selectedAsset.aiAnalysis.analysis?.confidence || 85}%
+                        </div>
+                        <div className="text-sm text-muted-foreground">Confidence</div>
+                      </div>
+                      <div className="text-center p-4 bg-background/30 rounded-lg">
+                        <div className="text-2xl font-700 text-blue-400 mb-1">
+                          ${selectedAsset.aiAnalysis.analysis?.targetPrice || selectedAsset.price.toFixed(2)}
+                        </div>
+                        <div className="text-sm text-muted-foreground">Target Price</div>
+                      </div>
+                    </div>
+                    
+                    {selectedAsset.aiAnalysis.analysis?.reasoning && (
+                      <div className="p-4 bg-background/30 rounded-lg">
+                        <h4 className="font-600 mb-2">Analysis Reasoning:</h4>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {selectedAsset.aiAnalysis.analysis.reasoning}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Quick Actions */}
+              <div className="flex space-x-3">
+                <Button 
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                  onClick={() => {
+                    // Handle buy action
+                    console.log('Buy action for', selectedAsset.symbol);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add to Portfolio
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => toggleWatchlist(selectedAsset.symbol)}
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${watchlist.includes(selectedAsset.symbol) ? 'fill-red-500 text-red-500' : ''}`} />
+                  {watchlist.includes(selectedAsset.symbol) ? 'Remove from Watchlist' : 'Add to Watchlist'}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => getAIAnalysis(selectedAsset.symbol)}
+                  disabled={aiAnalysisMutation.isPending}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${aiAnalysisMutation.isPending ? 'animate-spin' : ''}`} />
+                  Refresh Analysis
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Market Alerts Dialog */}
+      <Dialog open={alertsOpen} onOpenChange={setAlertsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Bell className="h-6 w-6 mr-2 text-yellow-400" />
+              Market Alerts
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-yellow-400 mr-2" />
+                <span className="font-600">High Volume Alert</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Several assets showing unusual volume spikes
+              </p>
+            </div>
+            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <div className="flex items-center">
+                <TrendingUp className="h-5 w-5 text-green-400 mr-2" />
+                <span className="font-600">Breakout Signals</span>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                {filteredData.filter(a => a.signal === 'BUY').length} assets showing buy signals
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

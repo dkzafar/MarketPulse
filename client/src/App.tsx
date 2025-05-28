@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
 import Markets from "@/pages/markets-new";
+import EnhancedMarkets from "@/pages/enhanced-markets";
 import AIChat from "@/pages/ai-chat";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
@@ -43,7 +44,7 @@ function Router() {
             <ProtectedRoute component={Portfolio} />
           </Route>
           <Route path="/markets">
-            <ProtectedRoute component={Markets} />
+            <ProtectedRoute component={EnhancedMarkets} />
           </Route>
           <Route path="/markets-new">
             <ProtectedRoute component={Markets} />

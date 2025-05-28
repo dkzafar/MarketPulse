@@ -43,15 +43,15 @@ export default function MobileNav() {
     <>
       {/* Bottom Navigation Bar (Mobile) */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t lg:hidden">
-        <div className="grid grid-cols-4 h-16">
+        <div className="flex h-16 w-full">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = location === item.href || (item.href === '/dashboard' && location === '/');
             
             return (
-              <Link key={item.name} href={item.href}>
+              <Link key={item.name} href={item.href} className="flex-1">
                 <div className={cn(
-                  "flex flex-col items-center justify-center h-full space-y-1 transition-colors",
+                  "flex flex-col items-center justify-center h-full space-y-1 transition-colors relative",
                   isActive 
                     ? "text-primary" 
                     : "text-muted-foreground hover:text-foreground"

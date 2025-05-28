@@ -158,6 +158,7 @@ export default function EnhancedMarketsPage() {
 
   // Helper functions
   function getSector(symbol: string): string {
+    if (!symbol) return 'Other';
     const techSymbols = ['AAPL', 'GOOGL', 'MSFT', 'NVDA', 'META', 'AMZN', 'TSLA'];
     const financeSymbols = ['JPM', 'BAC', 'WFC', 'GS', 'MS', 'C'];
     const healthSymbols = ['JNJ', 'PFE', 'UNH', 'ABT', 'TMO'];
@@ -169,12 +170,14 @@ export default function EnhancedMarketsPage() {
   }
 
   function getSentiment(changePercent: number): 'bullish' | 'bearish' | 'neutral' {
+    if (!changePercent) return 'neutral';
     if (changePercent > 2) return 'bullish';
     if (changePercent < -2) return 'bearish';
     return 'neutral';
   }
 
   function getRegion(symbol: string): string {
+    if (!symbol) return 'US';
     // Simplified region detection - in real app would use comprehensive mapping
     if (symbol.includes('.TO')) return 'Canada';
     if (symbol.includes('.L')) return 'UK';
@@ -183,6 +186,7 @@ export default function EnhancedMarketsPage() {
   }
 
   function getAISignal(changePercent: number, volume: number): 'BUY' | 'SELL' | 'HOLD' | 'WATCH' {
+    if (!changePercent || !volume) return 'HOLD';
     if (changePercent > 5 && volume > 1000000) return 'BUY';
     if (changePercent < -5 && volume > 1000000) return 'SELL';
     if (Math.abs(changePercent) > 3) return 'WATCH';

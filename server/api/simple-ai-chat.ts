@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import Anthropic from '@anthropic-ai/sdk';
 
 const router = Router();
 
@@ -23,11 +24,46 @@ async function getMarketContext() {
   return null;
 }
 
-// Enhanced AI analysis with conversation context
+// Build a market data summary string for the system prompt
+function buildMarketSummary(marketData: any): string {
+  if (!marketData) {
+    return 'Market data is currently unavailable.';
+  }
+
+  try {
+    // Accept either an array directly or an object with a data/assets property
+    const assets: any[] = Array.isArray(marketData)
+      ? marketData
+      : (marketData.data || marketData.assets || []);
+
+    if (!assets.length) {
+      return 'Market data is currently unavailable.';
+    }
+
+    // Top 20 by volume (data endpoint already filters, but sort defensively)
+    const top20 = assets
+      .slice(0, 20)
+      .map((a: any) => {
+        const symbol = a.symbol || a.ticker || '?';
+        const price = a.price != null ? `$${Number(a.price).toFixed(2)}` : 'N/A';
+        const change = a.changePercent != null
+          ? `${Number(a.changePercent).toFixed(2)}%`
+          : (a.change_percent != null ? `${Number(a.change_percent).toFixed(2)}%` : 'N/A');
+        return `${symbol}: ${price} (${change})`;
+      })
+      .join(', ');
+
+    return `Top assets by volume: ${top20}`;
+  } catch {
+    return 'Market data parsing failed.';
+  }
+}
+
+// Enhanced AI analysis with conversation context (rule-based fallback)
 function analyzeWithContext(query: string, history: any[], marketData: any) {
   const lowerQuery = query.toLowerCase();
   const recentContext = history.slice(-4).map(h => h.content).join(' ').toLowerCase();
-  
+
   // Portfolio analysis with real data
   if (lowerQuery.includes('portfolio') || lowerQuery.includes('my stocks')) {
     const contextual = recentContext.includes('risk') ? 'As we discussed your risk tolerance, ' : '';
@@ -94,8 +130,8 @@ router.post('/simple-ai-chat', async (req, res) => {
     const { query, sessionId = 'default' } = req.body;
 
     if (!query || typeof query !== 'string') {
-      return res.status(400).json({ 
-        error: 'Query is required' 
+      return res.status(400).json({
+        error: 'Query is required'
       });
     }
 
@@ -103,9 +139,9 @@ router.post('/simple-ai-chat', async (req, res) => {
     if (!conversationMemory.has(sessionId)) {
       conversationMemory.set(sessionId, []);
     }
-    
+
     const history = conversationMemory.get(sessionId)!;
-    
+
     // Add user message to memory
     history.push({
       role: 'user',
@@ -115,16 +151,68 @@ router.post('/simple-ai-chat', async (req, res) => {
 
     // Get live market data for context
     const marketData = await getMarketContext();
-    
-    // Generate contextual response
-    const analysis = analyzeWithContext(query, history, marketData);
+
+    let answer: string;
+    let confidence: number;
+    let recommendations: any[];
+
+    if (process.env.ANTHROPIC_API_KEY) {
+      // --- Anthropic SDK path ---
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+      const marketSummary = buildMarketSummary(marketData);
+
+      const systemPrompt = `You are an expert financial analyst and trading assistant integrated into MarketPulse, a professional market data platform.
+
+Current market context:
+${marketSummary}
+
+Your role:
+- Provide concise, actionable investment insights based on the market data above
+- Reference specific assets and their performance when relevant
+- Help users understand market trends, portfolio strategies, and investment opportunities
+- Be direct and data-driven in your analysis
+
+IMPORTANT DISCLAIMER: All information provided is for educational purposes only and does not constitute financial advice. Always consult a licensed financial advisor before making investment decisions.`;
+
+      // Build conversation messages from history (excluding the current query, which we send last)
+      const conversationMessages: Array<{ role: 'user' | 'assistant'; content: string }> =
+        history
+          .slice(0, -1) // exclude the current user message we just pushed
+          .map(entry => ({
+            role: entry.role,
+            content: entry.content
+          }));
+
+      // Append the current user query as the final message
+      conversationMessages.push({ role: 'user', content: query });
+
+      const aiResponse = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: conversationMessages
+      });
+
+      answer = aiResponse.content[0].type === 'text' ? aiResponse.content[0].text : '';
+      confidence = 0.90;
+      recommendations = [];
+    } else {
+      // --- Rule-based fallback path ---
+      const analysis = analyzeWithContext(query, history, marketData);
+      answer = analysis.answer;
+      confidence = analysis.confidence;
+      recommendations = (analysis as any).recommendations || [];
+    }
 
     const response = {
-      answer: analysis.answer,
-      confidence: analysis.confidence,
+      answer,
+      confidence,
       timestamp: new Date().toISOString(),
-      dataSource: "Live 631-asset market data with conversation memory",
-      recommendations: analysis.recommendations || [],
+      dataSource: process.env.ANTHROPIC_API_KEY
+        ? 'Claude AI with live market data'
+        : 'Live 631-asset market data with conversation memory',
+      recommendations,
       conversationTurn: history.length,
       hasMemory: history.length > 1
     };
@@ -132,9 +220,9 @@ router.post('/simple-ai-chat', async (req, res) => {
     // Add assistant response to memory
     history.push({
       role: 'assistant',
-      content: response.answer,
+      content: answer,
       timestamp: new Date(),
-      marketData: analysis.recommendations
+      marketData: recommendations.length ? recommendations : undefined
     });
 
     // Keep memory manageable (last 30 messages)
@@ -146,9 +234,9 @@ router.post('/simple-ai-chat', async (req, res) => {
 
   } catch (error: any) {
     console.error('Enhanced AI chat error:', error.message);
-    res.status(500).json({ 
-      error: 'AI chat failed', 
-      details: error.message 
+    res.status(500).json({
+      error: 'AI chat failed',
+      details: error.message
     });
   }
 });
@@ -157,9 +245,9 @@ router.post('/simple-ai-chat', async (req, res) => {
 router.delete('/simple-ai-chat/:sessionId?', (req, res) => {
   const sessionId = req.params.sessionId || 'default';
   conversationMemory.delete(sessionId);
-  res.json({ 
+  res.json({
     message: 'Conversation memory cleared',
-    sessionId 
+    sessionId
   });
 });
 

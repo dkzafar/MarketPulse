@@ -6,12 +6,17 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
-import Markets from "@/pages/markets-new";
 import EnhancedMarkets from "@/pages/enhanced-markets";
 import AIChat from "@/pages/ai-chat";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import MobileNav from "@/components/mobile-nav";
+import { useLivePrices } from "@/hooks/use-live-prices";
+
+function LivePricesProvider() {
+  useLivePrices();
+  return null;
+}
 
 function ProtectedRoute({ component: Component, ...props }: any) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -36,6 +41,7 @@ function Router() {
   
   return (
     <div className="flex">
+      {isAuthenticated && <LivePricesProvider />}
       {isAuthenticated && <MobileNav />}
       <div className={`flex-1 ${isAuthenticated ? 'lg:ml-64 pb-16 lg:pb-0' : ''}`}>
         <Switch>
@@ -45,9 +51,6 @@ function Router() {
           </Route>
           <Route path="/markets">
             <ProtectedRoute component={EnhancedMarkets} />
-          </Route>
-          <Route path="/markets-new">
-            <ProtectedRoute component={Markets} />
           </Route>
           <Route path="/ai-chat">
             <ProtectedRoute component={AIChat} />

@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { loginSchema, registerSchema, insertTransactionSchema, addPositionSchema } from "@shared/schema";
 import type { AuthenticatedRequest } from "./types";
+import { setupWebSocket } from "./websocket";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -325,7 +326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ];
 
         // Fetch authentic stock data with multiple sources
-        for (let i = 0; i < priorityStocks.length; i += 10) {
+        const BATCH_SIZE = 10;
+        let totalProcessed = 0;
+        for (let i = 0; i < priorityStocks.length; i += BATCH_SIZE) {
           const batch = priorityStocks.slice(i, i + 10);
           const batchPromises = batch.map(async (symbol) => {
             if (processedSymbols.has(symbol)) return null;
@@ -389,14 +392,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✓ Batch ${Math.floor(i/BATCH_SIZE) + 1}: ${validResults.length}/${batch.length} stocks processed. Total: ${totalProcessed}`);
           
           // Small delay between batches
-          if (i + BATCH_SIZE < stockSymbols.length) {
+          if (i + BATCH_SIZE < priorityStocks.length) {
             await new Promise(resolve => setTimeout(resolve, 200));
           }
         }
         
-        console.log(`✓ Processed ${totalProcessed}/${stockSymbols.length} stocks using multiple data sources`);
+        console.log(`✓ Processed ${totalProcessed}/${priorityStocks.length} stocks using multiple data sources`);
         
-        console.log(`✓ Fetched ${results.filter(r => r.category === 'traditional').length} live stocks from Finnhub`);
+        // Merge crypto and forex collected in authenticResults into main results
+        results.push(...authenticResults);
+        console.log(`✓ Fetched ${results.filter((r: any) => r.category === 'traditional').length} live stocks from Finnhub`);
       } else {
         console.log('❌ No Finnhub API key available');
       }
@@ -1031,6 +1036,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return new Date().toISOString().split('T')[0];
   }
 
+  function getForexRate(pair: string): number {
+    const rates: { [key: string]: number } = {
+      'EURUSD': 1.085, 'GBPUSD': 1.265, 'USDJPY': 149.5, 'USDCHF': 0.895,
+      'AUDUSD': 0.645, 'USDCAD': 1.365, 'NZDUSD': 0.595, 'EURJPY': 162.2,
+      'GBPJPY': 189.1, 'EURGBP': 0.858, 'AUDJPY': 96.4, 'EURAUD': 1.682,
+      'EURCHF': 0.971, 'AUDNZD': 1.083, 'NZDJPY': 89.0, 'GBPAUD': 1.960,
+      'GBPCAD': 1.726, 'EURNZD': 1.821, 'AUDCAD': 0.881, 'GBPCHF': 1.132,
+      'CHFJPY': 167.1, 'CADCHF': 0.655, 'AUDCHF': 0.578, 'NZDCHF': 0.533,
+      'EURCAD': 1.481, 'GBPNZD': 2.122, 'AUDSGD': 0.873, 'NZDCAD': 0.812,
+      'CADJPY': 109.6, 'SGDJPY': 111.2,
+    };
+    return rates[pair] ?? 1.0;
+  }
+
   function getDateDaysAgo(days: number): string {
     const date = new Date();
     date.setDate(date.getDate() - days);
@@ -1278,6 +1297,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
   const httpServer = createServer(app);
+  setupWebSocket(httpServer);
   return httpServer;
 }

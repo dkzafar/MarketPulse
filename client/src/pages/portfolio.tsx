@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import PortfolioOverview from "@/components/portfolio-overview";
 
 export default function Portfolio() {
@@ -8,7 +9,9 @@ export default function Portfolio() {
           <h1 className="text-3xl font-bold text-foreground mb-2">Portfolio Management</h1>
           <p className="text-muted-foreground">Track your stock positions and analyze your investment performance</p>
         </div>
-        <PortfolioOverview />
+        <Suspense fallback={<div>Loading...</div>}>
+          <PortfolioOverview />
+        </Suspense>
       </div>
     </div>
   );

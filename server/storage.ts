@@ -444,4 +444,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DrizzleStorage } from './db-storage';
+export const storage: IStorage = process.env.DATABASE_URL ? new DrizzleStorage() : new MemStorage();

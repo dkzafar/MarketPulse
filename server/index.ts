@@ -1,15 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { registerRoutes } from "./comprehensive-asset-system";
+import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import analysisRouter from './api/analysis';
-import enhancedRouter from './api/enhanced-routes';
-import demoRouter from './api/demo-enhanced';
-import patternRouter from './api/pattern-analysis';
-import sentimentRouter from './api/social-sentiment';
 import portfolioOptimizationRouter from './api/portfolio-optimization';
-import stressTestingRouter from './api/stress-testing';
 import simpleAiChatRouter from './api/simple-ai-chat';
 
 const app = express();
@@ -68,26 +62,8 @@ app.use((req, res, next) => {
   // Register other routes
   const server = await registerRoutes(app);
   
-  // Add analysis endpoint
-  app.use('/api', analysisRouter);
-  
-  // Add enhanced features
-  app.use('/api', enhancedRouter);
-  
-  // Add demo endpoints
-  app.use('/api', demoRouter);
-  
-  // Add pattern analysis endpoints
-  app.use('/api', patternRouter);
-  
-  // Add social sentiment endpoints
-  app.use('/api', sentimentRouter);
-  
   // Add portfolio optimization endpoints
   app.use('/api', portfolioOptimizationRouter);
-  
-  // Add stress testing endpoints
-  app.use('/api', stressTestingRouter);
   
   // Add working AI chat endpoints
   app.use('/api', simpleAiChatRouter);
@@ -109,10 +85,8 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  // Serve the app on the configured port, defaulting to 5000.
+  const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
     host: "0.0.0.0",

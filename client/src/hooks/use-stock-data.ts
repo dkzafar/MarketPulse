@@ -1,27 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import type { StockQuote } from "@shared/schema";
 
-export function useStockData(symbols: string[]) {
-  const { data: quotes, isLoading, error } = useQuery<StockQuote[]>({
-    queryKey: ["/api/quotes"],
+export function useStockData(_symbols?: string[]) {
+  const { data: quotes, isLoading, error } = useQuery<any[]>({
+    queryKey: ["/api/market-data"],
     queryFn: async () => {
-      const response = await fetch("/api/quotes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ symbols }),
-      });
-
+      const response = await fetch("/api/market-data");
       if (!response.ok) {
-        throw new Error("Failed to fetch stock quotes");
+        throw new Error("Failed to fetch market data");
       }
-
       return response.json();
     },
-    enabled: symbols.length > 0,
-    staleTime: 60000, // 1 minute
-    refetchInterval: 60000, // Refetch every minute
+    staleTime: 60000,
+    refetchInterval: 60000,
   });
 
   return {

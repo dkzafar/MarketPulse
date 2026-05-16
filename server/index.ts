@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
-import { registerRoutes } from "./comprehensive-asset-system";
+import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import analysisRouter from './api/analysis';
 import enhancedRouter from './api/enhanced-routes';

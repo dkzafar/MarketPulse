@@ -1,26 +1,39 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import portfolioOptimizationRouter from './api/portfolio-optimization';
 import simpleAiChatRouter from './api/simple-ai-chat';
 
+if (!process.env.SESSION_SECRET) {
+  console.warn("⚠️  SESSION_SECRET is not set — using insecure default. Set it in production.");
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session configuration
+// Session configuration — uses PostgreSQL store when DATABASE_URL is set, memory store otherwise
 const MemoryStoreSession = MemoryStore(session);
+const PgStore = connectPgSimple(session);
+
+const sessionStore = process.env.DATABASE_URL
+  ? new PgStore({
+      conString: process.env.DATABASE_URL,
+      tableName: "session",
+      createTableIfMissing: true,
+    })
+  : new MemoryStoreSession({ checkPeriod: 86400000 });
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
-  store: new MemoryStoreSession({
-    checkPeriod: 86400000, // prune expired entries every 24h
-  }),
+  store: sessionStore,
   cookie: {
-    secure: false, // Set to true in production with HTTPS
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
   },

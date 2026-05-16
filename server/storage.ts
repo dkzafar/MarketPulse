@@ -1,11 +1,5 @@
-import { 
-  users, 
-  watchlists, 
-  stockQuotes, 
-  newsArticles,
-  portfolioPositions,
-  transactions,
-  type User, 
+import {
+  type User,
   type InsertUser,
   type Watchlist,
   type InsertWatchlist,
@@ -444,4 +438,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DbStorage } from "./db-storage";
+
+export const storage: IStorage = process.env.DATABASE_URL
+  ? new DbStorage()
+  : new MemStorage();

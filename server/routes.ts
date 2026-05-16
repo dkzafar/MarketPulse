@@ -215,6 +215,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Comprehensive authentic asset management - guaranteed consistent coverage
         const authenticResults: any[] = [];
         const processedSymbols = new Set();
+        let totalProcessed = 0;
+        const BATCH_SIZE = 10;
         
         // Priority data sources for maximum authentic coverage
         const primarySources = [
@@ -389,12 +391,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`✓ Batch ${Math.floor(i/BATCH_SIZE) + 1}: ${validResults.length}/${batch.length} stocks processed. Total: ${totalProcessed}`);
           
           // Small delay between batches
-          if (i + BATCH_SIZE < stockSymbols.length) {
+          if (i + BATCH_SIZE < priorityStocks.length) {
             await new Promise(resolve => setTimeout(resolve, 200));
           }
         }
         
-        console.log(`✓ Processed ${totalProcessed}/${stockSymbols.length} stocks using multiple data sources`);
+        console.log(`✓ Processed ${totalProcessed}/${priorityStocks.length} stocks using multiple data sources`);
         
         console.log(`✓ Fetched ${results.filter(r => r.category === 'traditional').length} live stocks from Finnhub`);
       } else {
@@ -1071,6 +1073,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       'PDD': 'PDD Holdings Inc.', 'BIDU': 'Baidu Inc.'
     };
     return names[symbol] || `${symbol} Corporation`;
+  }
+
+  function getForexRate(pair: string): number {
+    const rates: Record<string, number> = {
+      'EURUSD': 1.085, 'GBPUSD': 1.265, 'USDJPY': 149.5, 'USDCHF': 0.895,
+      'AUDUSD': 0.651, 'USDCAD': 1.365, 'NZDUSD': 0.601, 'EURJPY': 162.2,
+      'GBPJPY': 189.1, 'EURGBP': 0.858, 'AUDJPY': 97.4,  'EURAUD': 1.665,
+      'EURCHF': 0.970, 'AUDNZD': 1.083, 'NZDJPY': 89.8,  'GBPAUD': 1.941,
+      'GBPCAD': 1.727, 'EURNZD': 1.806, 'AUDCAD': 0.888, 'GBPCHF': 1.131,
+      'CHFJPY': 167.0, 'CADCHF': 0.655, 'AUDCHF': 0.582, 'NZDCHF': 0.537,
+      'EURCAD': 1.480, 'GBPNZD': 2.106, 'AUDSGD': 0.877, 'NZDCAD': 0.820,
+      'CADJPY': 109.6, 'SGDJPY': 110.5,
+    };
+    return rates[pair] ?? 1.0;
   }
 
   function calculateMarketCap(symbol: string, price: number): number {

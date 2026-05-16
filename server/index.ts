@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import MemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import analysisRouter from './api/analysis';
@@ -18,13 +20,15 @@ app.use(express.urlencoded({ extended: false }));
 
 // Session configuration
 const MemoryStoreSession = MemoryStore(session);
+const sessionStore = pool
+  ? new (connectPg(session))({ pool: pool! })
+  : new MemoryStoreSession({ checkPeriod: 86400000 }); // prune expired entries every 24h
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
-  store: new MemoryStoreSession({
-    checkPeriod: 86400000, // prune expired entries every 24h
-  }),
+  store: sessionStore,
   cookie: {
     secure: false, // Set to true in production with HTTPS
     httpOnly: true,

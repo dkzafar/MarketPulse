@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
-import Markets from "@/pages/markets-new";
 import EnhancedMarkets from "@/pages/enhanced-markets";
 import AIChat from "@/pages/ai-chat";
 import AuthPage from "@/pages/auth";
@@ -45,9 +44,6 @@ function Router() {
           </Route>
           <Route path="/markets">
             <ProtectedRoute component={EnhancedMarkets} />
-          </Route>
-          <Route path="/markets-new">
-            <ProtectedRoute component={Markets} />
           </Route>
           <Route path="/ai-chat">
             <ProtectedRoute component={AIChat} />

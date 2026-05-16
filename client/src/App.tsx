@@ -11,6 +11,12 @@ import AIChat from "@/pages/ai-chat";
 import AuthPage from "@/pages/auth";
 import NotFound from "@/pages/not-found";
 import MobileNav from "@/components/mobile-nav";
+import { useLivePrices } from "@/hooks/use-live-prices";
+
+function LivePricesProvider() {
+  useLivePrices();
+  return null;
+}
 
 function ProtectedRoute({ component: Component, ...props }: any) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -35,6 +41,7 @@ function Router() {
   
   return (
     <div className="flex">
+      {isAuthenticated && <LivePricesProvider />}
       {isAuthenticated && <MobileNav />}
       <div className={`flex-1 ${isAuthenticated ? 'lg:ml-64 pb-16 lg:pb-0' : ''}`}>
         <Switch>

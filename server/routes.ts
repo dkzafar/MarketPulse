@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { loginSchema, registerSchema, insertTransactionSchema, addPositionSchema } from "@shared/schema";
 import type { AuthenticatedRequest } from "./types";
+import { setupWebSocket } from "./websocket";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -1297,5 +1298,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  setupWebSocket(httpServer);
   return httpServer;
 }

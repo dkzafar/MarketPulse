@@ -10,6 +10,7 @@ import Markets from "@/pages/markets-new";
 import EnhancedMarkets from "@/pages/enhanced-markets";
 import AIChat from "@/pages/ai-chat";
 import AuthPage from "@/pages/auth";
+import ProfilePage from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 import MobileNav from "@/components/mobile-nav";
 
@@ -37,7 +38,7 @@ function Router() {
   return (
     <div className="flex">
       {isAuthenticated && <MobileNav />}
-      <div className={`flex-1 ${isAuthenticated ? 'lg:ml-64 pb-16 lg:pb-0' : ''}`}>
+      <div className={`flex-1 min-w-0 ${isAuthenticated ? 'lg:ml-64 pb-20 lg:pb-0' : ''}`}>
         <Switch>
           <Route path="/auth" component={AuthPage} />
           <Route path="/portfolio">
@@ -51,6 +52,12 @@ function Router() {
           </Route>
           <Route path="/ai-chat">
             <ProtectedRoute component={AIChat} />
+          </Route>
+          <Route path="/profile">
+            <ProtectedRoute component={ProfilePage} />
+          </Route>
+          <Route path="/dashboard">
+            <ProtectedRoute component={Dashboard} />
           </Route>
           <Route path="/">
             <ProtectedRoute component={Dashboard} />

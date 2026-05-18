@@ -70,7 +70,7 @@ export default function Dashboard() {
         onSymbolSelect={setSelectedSymbol}
       />
 
-      <main className="flex-1 lg:ml-64">
+      <main className="flex-1 min-w-0 w-full">
         <motion.div
           initial="hidden"
           animate="visible"

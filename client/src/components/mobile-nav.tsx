@@ -4,36 +4,11 @@ import { Home, PieChart, TrendingUp, Brain, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  {
-    name: 'Dashboard',
-    href: '/dashboard',
-    icon: Home,
-    label: 'Home'
-  },
-  {
-    name: 'Portfolio',
-    href: '/portfolio', 
-    icon: PieChart,
-    label: 'Portfolio'
-  },
-  {
-    name: 'Markets',
-    href: '/markets',
-    icon: TrendingUp,
-    label: 'Markets'
-  },
-  {
-    name: 'AI Chat',
-    href: '/ai-chat',
-    icon: Brain,
-    label: 'AI Chat'
-  },
-  {
-    name: 'Profile',
-    href: '/profile',
-    icon: User,
-    label: 'Profile'
-  }
+  { name: 'Home',      href: '/',          icon: Home,      label: 'Home' },
+  { name: 'Portfolio', href: '/portfolio',  icon: PieChart,  label: 'Portfolio' },
+  { name: 'Markets',   href: '/markets',    icon: TrendingUp,label: 'Markets' },
+  { name: 'AI Chat',   href: '/ai-chat',    icon: Brain,     label: 'AI' },
+  { name: 'Profile',   href: '/profile',    icon: User,      label: 'Profile' },
 ];
 
 export default function MobileNav() {
@@ -46,7 +21,7 @@ export default function MobileNav() {
         <div className="flex h-16 w-full">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location === item.href || (item.href === '/dashboard' && location === '/');
+            const isActive = location === item.href || (item.href === '/' && location === '/dashboard');
             
             return (
               <Link key={item.name} href={item.href} className="flex-1">
@@ -93,7 +68,7 @@ export default function MobileNav() {
           <nav className="flex-1 px-4 py-6 space-y-2">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = location === item.href || (item.href === '/dashboard' && location === '/');
+              const isActive = location === item.href || (item.href === '/' && location === '/dashboard');
               
               return (
                 <Link key={item.name} href={item.href}>

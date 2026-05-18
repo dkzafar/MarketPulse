@@ -46,7 +46,7 @@ export default function SimpleRegister({ onSuccess, onSwitchToLogin }: SimpleReg
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.setQueryData(["/api/auth/me"], data.user || data);
       toast({
         title: "Welcome to TradingPro!",
         description: "Your account has been created successfully.",

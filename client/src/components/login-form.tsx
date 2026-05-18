@@ -51,7 +51,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
       return response.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.setQueryData(["/api/auth/me"], data.user || data);
       toast({
         title: "Welcome back!",
         description: "You've successfully logged in.",

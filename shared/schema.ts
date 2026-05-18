@@ -14,7 +14,8 @@ export const users = pgTable("users", {
   isVerified: boolean("is_verified").default(false),
   totalTrades: integer("total_trades").default(0),
   successfulTrades: integer("successful_trades").default(0),
-  portfolioValue: real("portfolio_value").default(10000), // Starting virtual money
+  portfolioValue: real("portfolio_value").default(10000),
+  cashBalance: real("cash_balance").default(10000), // Virtual cash available to trade
   joinedAt: timestamp("joined_at").defaultNow(),
   lastLogin: timestamp("last_login"),
 });

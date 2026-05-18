@@ -25,7 +25,9 @@ export interface IStorage {
   
   // Authentication
   verifyPassword(email: string, password: string): Promise<User | null>;
-  
+  getCashBalance(userId: number): Promise<number>;
+  updateCashBalance(userId: number, newBalance: number): Promise<void>;
+
   // Watchlist management
   getWatchlist(userId: number): Promise<Watchlist | undefined>;
   createWatchlist(watchlist: InsertWatchlist & { userId: number }): Promise<Watchlist>;
@@ -229,9 +231,21 @@ export class MemStorage implements IStorage {
   async verifyPassword(email: string, password: string): Promise<User | null> {
     const user = await this.getUserByEmail(email);
     if (!user) return null;
-    
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
+  }
+
+  async getCashBalance(userId: number): Promise<number> {
+    const user = this.users.get(userId);
+    return user?.cashBalance ?? 10000;
+  }
+
+  async updateCashBalance(userId: number, newBalance: number): Promise<void> {
+    const user = this.users.get(userId);
+    if (user) {
+      user.cashBalance = newBalance;
+      this.users.set(userId, user);
+    }
   }
 
   async getWatchlist(userId: number): Promise<Watchlist | undefined> {

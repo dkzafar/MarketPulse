@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, watchlists, stockQuotes, newsArticles, portfolioPositions, transactions,
@@ -6,7 +6,7 @@ import {
   type Watchlist, type InsertWatchlist,
   type StockQuote, type InsertStockQuote,
   type NewsArticle, type InsertNewsArticle,
-  type PortfolioPosition, type InsertPortfolioPosition,
+  type PortfolioPosition,
   type Transaction, type InsertTransaction,
 } from "@shared/schema";
 import bcrypt from "bcrypt";
@@ -14,7 +14,15 @@ import type { IStorage } from "./storage";
 
 export class DbStorage implements IStorage {
   constructor() {
-    this.seedDemoUser().catch(err => console.error("Failed to seed demo user:", err));
+    this.runMigrations()
+      .then(() => this.seedDemoUser())
+      .catch(err => console.error("Startup error:", err));
+  }
+
+  private async runMigrations() {
+    await db.execute(sql`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS cash_balance real DEFAULT 10000
+    `);
   }
 
   private async seedDemoUser() {
@@ -27,28 +35,29 @@ export class DbStorage implements IStorage {
         password: hash,
         firstName: "Demo",
         lastName: "User",
+        cashBalance: 10000,
       });
 
-      // Seed sample portfolio positions for the demo user
       const [demoUser] = await db.select().from(users).where(eq(users.email, "test@example.com"));
       if (demoUser) {
         const positions = [
-          { symbol: "AAPL", quantity: "100", averagePrice: "150.25", totalCost: "15025.00" },
-          { symbol: "TSLA", quantity: "50",  averagePrice: "245.80", totalCost: "12290.00" },
-          { symbol: "MSFT", quantity: "75",  averagePrice: "335.50", totalCost: "25162.50" },
-          { symbol: "GOOGL", quantity: "25", averagePrice: "2850.00", totalCost: "71250.00" },
-          { symbol: "NVDA", quantity: "40",  averagePrice: "420.75", totalCost: "16830.00" },
+          { symbol: "AAPL", quantity: "10", averagePrice: "150.25", totalCost: "1502.50" },
+          { symbol: "TSLA", quantity: "5",  averagePrice: "245.80", totalCost: "1229.00" },
+          { symbol: "MSFT", quantity: "8",  averagePrice: "335.50", totalCost: "2684.00" },
+          { symbol: "NVDA", quantity: "4",  averagePrice: "420.75", totalCost: "1683.00" },
         ];
         await db.insert(portfolioPositions).values(
           positions.map(p => ({ userId: demoUser.id, ...p }))
         );
 
+        const spent = positions.reduce((sum, p) => sum + parseFloat(p.totalCost), 0);
+        await db.update(users).set({ cashBalance: 10000 - spent }).where(eq(users.id, demoUser.id));
+
         await db.insert(transactions).values([
-          { userId: demoUser.id, symbol: "AAPL",  type: "buy", quantity: "100", price: "150.25", totalAmount: "15025.00", notes: "Initial Apple position" },
-          { userId: demoUser.id, symbol: "TSLA",  type: "buy", quantity: "50",  price: "245.80", totalAmount: "12290.00", notes: "Tesla investment" },
-          { userId: demoUser.id, symbol: "MSFT",  type: "buy", quantity: "75",  price: "335.50", totalAmount: "25162.50", notes: "Microsoft shares" },
-          { userId: demoUser.id, symbol: "GOOGL", type: "buy", quantity: "25",  price: "2850.00", totalAmount: "71250.00", notes: "Google stock purchase" },
-          { userId: demoUser.id, symbol: "NVDA",  type: "buy", quantity: "40",  price: "420.75", totalAmount: "16830.00", notes: "NVIDIA position" },
+          { userId: demoUser.id, symbol: "AAPL", type: "buy", quantity: "10", price: "150.25", totalAmount: "1502.50", notes: "Initial Apple position" },
+          { userId: demoUser.id, symbol: "TSLA", type: "buy", quantity: "5",  price: "245.80", totalAmount: "1229.00", notes: "Tesla investment" },
+          { userId: demoUser.id, symbol: "MSFT", type: "buy", quantity: "8",  price: "335.50", totalAmount: "2684.00", notes: "Microsoft shares" },
+          { userId: demoUser.id, symbol: "NVDA", type: "buy", quantity: "4",  price: "420.75", totalAmount: "1683.00", notes: "NVIDIA position" },
         ]);
         console.log("✓ Demo user and sample portfolio seeded");
       }
@@ -71,7 +80,10 @@ export class DbStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
+    const [user] = await db.insert(users).values({
+      ...insertUser,
+      cashBalance: 10000,
+    }).returning();
     return user;
   }
 
@@ -90,6 +102,15 @@ export class DbStorage implements IStorage {
     if (!user) return null;
     const isValid = await bcrypt.compare(password, user.password);
     return isValid ? user : null;
+  }
+
+  async getCashBalance(userId: number): Promise<number> {
+    const user = await this.getUser(userId);
+    return user?.cashBalance ?? 10000;
+  }
+
+  async updateCashBalance(userId: number, newBalance: number): Promise<void> {
+    await db.update(users).set({ cashBalance: newBalance }).where(eq(users.id, userId));
   }
 
   async getWatchlist(userId: number): Promise<Watchlist | undefined> {
@@ -151,8 +172,47 @@ export class DbStorage implements IStorage {
     return created;
   }
 
+  // Fetch live price from Finnhub, falling back to cached quote
+  private async getLivePrice(symbol: string): Promise<number | null> {
+    const cached = await this.getStockQuote(symbol);
+    if (cached?.timestamp) {
+      const ageMs = Date.now() - new Date(cached.timestamp).getTime();
+      if (ageMs < 5 * 60 * 1000) return cached.price;
+    }
+
+    const key = process.env.FINNHUB_API_KEY;
+    if (key) {
+      try {
+        const resp = await fetch(`https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${key}`);
+        const data = await resp.json();
+        if (data.c && data.c > 0) {
+          await this.upsertStockQuote({ symbol, price: data.c, change: data.d ?? 0, changePercent: data.dp ?? 0 });
+          return data.c;
+        }
+      } catch {}
+    }
+
+    return cached?.price ?? null;
+  }
+
   async getPortfolioPositions(userId: number): Promise<PortfolioPosition[]> {
-    return db.select().from(portfolioPositions).where(eq(portfolioPositions.userId, userId));
+    const positions = await db.select().from(portfolioPositions)
+      .where(eq(portfolioPositions.userId, userId));
+
+    return Promise.all(positions.map(async (pos) => {
+      const livePrice = await this.getLivePrice(pos.symbol);
+      if (livePrice !== null) {
+        const qty = parseFloat(pos.quantity);
+        const currentValue = qty * livePrice;
+        const unrealizedPnL = currentValue - parseFloat(pos.totalCost);
+        return {
+          ...pos,
+          currentValue: currentValue.toFixed(2),
+          unrealizedPnL: unrealizedPnL.toFixed(2),
+        };
+      }
+      return pos;
+    }));
   }
 
   async getPortfolioPosition(userId: number, symbol: string): Promise<PortfolioPosition | undefined> {
@@ -162,7 +222,30 @@ export class DbStorage implements IStorage {
   }
 
   async addTransaction(transaction: InsertTransaction): Promise<Transaction> {
-    const [txn] = await db.insert(transactions).values(transaction).returning();
+    const quantity = parseFloat(transaction.quantity);
+    const price = parseFloat(transaction.price);
+    const totalAmount = quantity * price;
+
+    if (transaction.type === "buy") {
+      const cashBalance = await this.getCashBalance(transaction.userId);
+      if (totalAmount > cashBalance) {
+        throw new Error(`Insufficient funds. Available: $${cashBalance.toFixed(2)}, Required: $${totalAmount.toFixed(2)}`);
+      }
+      await this.updateCashBalance(transaction.userId, cashBalance - totalAmount);
+    } else if (transaction.type === "sell") {
+      const position = await this.getPortfolioPosition(transaction.userId, transaction.symbol);
+      const owned = position ? parseFloat(position.quantity) : 0;
+      if (quantity > owned) {
+        throw new Error(`Insufficient shares. You own ${owned} shares of ${transaction.symbol}`);
+      }
+      const cashBalance = await this.getCashBalance(transaction.userId);
+      await this.updateCashBalance(transaction.userId, cashBalance + totalAmount);
+    }
+
+    const [txn] = await db.insert(transactions).values({
+      ...transaction,
+      totalAmount: totalAmount.toFixed(2),
+    }).returning();
     await this.updatePortfolioAfterTransaction(txn);
     return txn;
   }
@@ -170,9 +253,12 @@ export class DbStorage implements IStorage {
   async getTransactions(userId: number, symbol?: string): Promise<Transaction[]> {
     if (symbol) {
       return db.select().from(transactions)
-        .where(and(eq(transactions.userId, userId), eq(transactions.symbol, symbol)));
+        .where(and(eq(transactions.userId, userId), eq(transactions.symbol, symbol)))
+        .orderBy(desc(transactions.executedAt));
     }
-    return db.select().from(transactions).where(eq(transactions.userId, userId));
+    return db.select().from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(desc(transactions.executedAt));
   }
 
   async updatePortfolioPosition(userId: number, symbol: string, updates: Partial<PortfolioPosition>): Promise<PortfolioPosition> {
@@ -215,18 +301,18 @@ export class DbStorage implements IStorage {
       const newTotalCost = existingCost + totalAmount;
       await this.updatePortfolioPosition(transaction.userId, transaction.symbol, {
         quantity: newQuantity.toString(),
-        averagePrice: (newTotalCost / newQuantity).toString(),
-        totalCost: newTotalCost.toString(),
+        averagePrice: (newTotalCost / newQuantity).toFixed(2),
+        totalCost: newTotalCost.toFixed(2),
       });
     } else if (transaction.type === "sell") {
       const newQuantity = existingQuantity - quantity;
-      if (newQuantity <= 0) {
+      if (newQuantity <= 0.0001) {
         await this.deletePortfolioPosition(transaction.userId, transaction.symbol);
       } else {
         const proportionSold = quantity / existingQuantity;
         await this.updatePortfolioPosition(transaction.userId, transaction.symbol, {
-          quantity: newQuantity.toString(),
-          totalCost: (existingCost * (1 - proportionSold)).toString(),
+          quantity: newQuantity.toFixed(6),
+          totalCost: (existingCost * (1 - proportionSold)).toFixed(2),
         });
       }
     }

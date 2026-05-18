@@ -1190,7 +1190,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ error: "User not found" });
     }
 
-    res.json({ user: { id: user.id, username: user.username, email: user.email } });
+    const cashBalance = await storage.getCashBalance(user.id);
+    res.json({ user: { id: user.id, username: user.username, email: user.email, cashBalance } });
   });
 
   // Portfolio routes
@@ -1221,9 +1222,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const transaction = await storage.addTransaction(transactionData);
       res.json(transaction);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Transaction error:", error);
-      res.status(400).json({ error: "Failed to add transaction" });
+      res.status(400).json({ error: error.message || "Failed to add transaction" });
+    }
+  });
+
+  app.get("/api/portfolio/transactions", async (req: AuthenticatedRequest, res) => {
+    if (!req.session.userId) return res.status(401).json({ error: "Not authenticated" });
+    try {
+      const transactions = await storage.getTransactions(req.session.userId);
+      res.json(transactions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch transactions" });
     }
   });
 

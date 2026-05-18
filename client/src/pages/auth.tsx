@@ -1,16 +1,17 @@
 import { useState } from "react";
 import LoginForm from "@/components/login-form";
 import SimpleRegister from "@/components/simple-register";
-import { Redirect } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const { isAuthenticated, isLoading } = useAuth();
+  const [, navigate] = useLocation();
 
   // Redirect to dashboard if already authenticated
   if (isAuthenticated) {
-    return <Redirect to="/dashboard" />;
+    return <Redirect to="/" />;
   }
 
   if (isLoading) {
@@ -22,7 +23,7 @@ export default function AuthPage() {
   }
 
   const handleAuthSuccess = () => {
-    // Redirect will happen automatically through the useAuth hook
+    navigate("/");
   };
 
   return (

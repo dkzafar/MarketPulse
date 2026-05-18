@@ -1,8 +1,13 @@
 import { Router } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 const router = Router();
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// Groq uses the OpenAI-compatible API
+const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY || '',
+  baseURL: 'https://api.groq.com/openai/v1',
+});
 
 // Per-session conversation history (last 20 messages)
 const conversationMemory = new Map<string, Array<{ role: 'user' | 'assistant'; content: string }>>();
@@ -12,12 +17,10 @@ async function getMarketSnapshot(): Promise<any[]> {
     const resp = await fetch('http://localhost:10000/api/market-data');
     if (resp.ok) {
       const data = await resp.json();
-      // Return top 20 assets by volume/relevance
       return (data.assets || data || []).slice(0, 20).map((a: any) => ({
         symbol: a.symbol,
         name: a.name,
         price: a.price,
-        change: a.change,
         changePercent: a.changePercent,
         category: a.category,
       }));
@@ -34,9 +37,9 @@ router.post('/simple-ai-chat', async (req, res) => {
       return res.status(400).json({ error: 'Query is required' });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
       return res.json({
-        answer: "AI chat requires an ANTHROPIC_API_KEY environment variable. Add it to your Render environment variables to enable real AI responses.",
+        answer: "AI chat requires a GROQ_API_KEY environment variable. Get a free key at console.groq.com and add it to your Render environment variables.",
         confidence: 0,
         timestamp: new Date().toISOString(),
       });
@@ -51,47 +54,43 @@ router.post('/simple-ai-chat', async (req, res) => {
 
     const portfolioSummary = portfolio.length > 0
       ? portfolio.map((p: any) =>
-          `${p.symbol}: ${p.quantity} shares @ avg $${p.averagePrice}, current value $${p.currentValue ?? p.totalCost}, P&L: ${p.unrealizedPnL ? '$' + parseFloat(p.unrealizedPnL).toFixed(2) : 'unknown'}`
+          `${p.symbol}: ${p.quantity} shares @ avg $${p.averagePrice}, value $${p.currentValue ?? p.totalCost}, P&L: ${p.unrealizedPnL ? '$' + parseFloat(p.unrealizedPnL).toFixed(2) : 'unknown'}`
         ).join('\n')
       : 'No positions yet';
 
-    const systemPrompt = `You are an expert financial advisor for MarketPulse, a paper trading platform (virtual money only — not real trading).
+    const systemPrompt = `You are a financial advisor for MarketPulse, a paper trading platform (virtual money — not real trading).
 
-User's current portfolio:
+User's portfolio:
 ${portfolioSummary}
 
-Available cash: $${cashBalance.toFixed ? cashBalance.toFixed(2) : cashBalance}
+Cash available: $${typeof cashBalance === 'number' ? cashBalance.toFixed(2) : cashBalance}
 
-Live market snapshot (top 20 assets):
-${marketData.map(a => `${a.symbol} (${a.name}): $${a.price} (${a.changePercent > 0 ? '+' : ''}${a.changePercent?.toFixed(2)}%)`).join('\n')}
+Live market (top assets):
+${marketData.map((a: any) => `${a.symbol} (${a.name}): $${a.price} (${a.changePercent > 0 ? '+' : ''}${a.changePercent?.toFixed(2)}%)`).join('\n')}
 
-Guidelines:
-- Give specific, actionable advice referencing actual prices and the user's real positions
-- Always remind users this is paper trading (virtual money)
-- Be concise — 2-4 sentences max unless asked for detail
-- Format recommendations as: SYMBOL: ACTION — reason
-- If asked about a stock not in the snapshot, say you don't have live data for it right now`;
+Be concise (2-4 sentences). Reference real prices and the user's actual positions. Always note this is paper trading.`;
 
     history.push({ role: 'user', content: query });
 
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const response = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
       max_tokens: 512,
-      system: systemPrompt,
-      messages: history.slice(-20),
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...history.slice(-20),
+      ],
     });
 
-    const answer = (response.content[0] as any).text;
+    const answer = response.choices[0]?.message?.content ?? 'No response generated.';
     history.push({ role: 'assistant', content: answer });
 
-    // Keep last 20 messages
     if (history.length > 20) history.splice(0, history.length - 20);
 
     res.json({
       answer,
-      confidence: 0.95,
+      confidence: 0.92,
       timestamp: new Date().toISOString(),
-      dataSource: 'Claude AI with live market context',
+      dataSource: 'Groq AI (Llama 3.1) with live market context',
       conversationTurn: history.length,
       hasMemory: history.length > 2,
     });

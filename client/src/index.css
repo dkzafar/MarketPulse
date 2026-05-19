@@ -178,6 +178,10 @@
   background: hsl(var(--primary));
 }
 
+/* Hide scrollbar utility (for Netflix-style horizontal rows) */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Stock price animation */
 .price-flash-green {
   animation: flashGreen 0.5s ease-out;

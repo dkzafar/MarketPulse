@@ -1,17 +1,27 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import Sidebar from "@/components/sidebar";
-import SummaryCards from "@/components/summary-cards";
-import PriceChart from "@/components/price-chart";
-import IndicatorsGrid from "@/components/indicators-grid";
-import AIInsights from "@/components/ai-insights";
-import NewsFeed from "@/components/news-feed";
-import { Button } from "@/components/ui/button";
-import { Plus, Moon, Sun, TrendingUp, TrendingDown } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
-import { useWatchlist } from "@/hooks/use-watchlist";
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Wallet } from "lucide-react";
+import { Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { useWatchlist } from "@/hooks/use-watchlist";
+import { cn } from "@/lib/utils";
+import ContentRow from "@/components/content-row";
+import NetflixStockCard from "@/components/netflix-stock-card";
+import QuickTradeDialog from "@/components/quick-trade-dialog";
+
+interface MarketAsset {
+  symbol: string;
+  name: string;
+  price: number;
+  changePercent: number;
+  change?: number;
+  volume?: number;
+  marketCap?: number;
+  category?: string;
+  signal?: string;
+  pe?: number;
+}
 
 interface PortfolioPosition {
   id: number;
@@ -23,155 +33,210 @@ interface PortfolioPosition {
   unrealizedPnL: string | null;
 }
 
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "morning";
+  if (h < 17) return "afternoon";
+  return "evening";
+}
+
+function HeroStat({ label, value, sub, icon, accent }: {
+  label: string; value: string; sub?: string;
+  icon: React.ReactNode; accent: "green" | "red" | "blue" | "purple";
+}) {
+  const colors: Record<string, string> = {
+    green:  "text-green-400 bg-green-500/10 border-green-500/20",
+    red:    "text-red-400 bg-red-500/10 border-red-500/20",
+    blue:   "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    purple: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  };
+  return (
+    <div className={cn("rounded-xl border p-4 backdrop-blur-sm", colors[accent])}>
+      <div className="flex items-center gap-2 mb-2 text-xs font-medium opacity-80">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="text-xl font-bold text-white">{value}</div>
+      {sub && <div className="text-xs mt-1 opacity-70">{sub}</div>}
+    </div>
+  );
+}
+
 export default function Dashboard() {
-  const [selectedSymbol, setSelectedSymbol] = useState("AAPL");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
-  const { watchlist } = useWatchlist();
   const { user } = useAuth();
+  const { watchlist } = useWatchlist();
+  const [tradeSymbol, setTradeSymbol] = useState<string | null>(null);
 
   const { data: positions = [] } = useQuery<PortfolioPosition[]>({
     queryKey: ["/api/portfolio/positions"],
     queryFn: async () => {
-      const resp = await fetch("/api/portfolio/positions");
-      if (!resp.ok) return [];
-      return resp.json();
+      const r = await fetch("/api/portfolio/positions", { credentials: "include" });
+      return r.ok ? r.json() : [];
     },
     refetchInterval: 60000,
   });
 
-  const totalCost = positions.reduce((sum, p) => sum + parseFloat(p.totalCost), 0);
-  const totalValue = positions.reduce((sum, p) => {
-    return sum + (p.currentValue ? parseFloat(p.currentValue) : parseFloat(p.totalCost));
-  }, 0);
-  const totalPnL = positions.reduce((sum, p) => {
-    return sum + (p.unrealizedPnL ? parseFloat(p.unrealizedPnL) : 0);
-  }, 0);
+  const { data: marketRaw = [], isLoading } = useQuery<MarketAsset[]>({
+    queryKey: ["/api/market-data"],
+    queryFn: async () => {
+      const r = await fetch("/api/market-data");
+      return r.ok ? r.json() : [];
+    },
+    refetchInterval: 30000,
+    staleTime: 15000,
+  });
+
+  const assets: MarketAsset[] = useMemo(() =>
+    Array.isArray(marketRaw)
+      ? marketRaw.filter((a): a is MarketAsset => !!a.symbol && typeof a.price === "number")
+      : [],
+    [marketRaw],
+  );
+
+  // Portfolio stats
+  const totalCost   = positions.reduce((s, p) => s + parseFloat(p.totalCost), 0);
+  const totalValue  = positions.reduce((s, p) => s + (p.currentValue ? parseFloat(p.currentValue) : parseFloat(p.totalCost)), 0);
+  const totalPnL    = positions.reduce((s, p) => s + (p.unrealizedPnL ? parseFloat(p.unrealizedPnL) : 0), 0);
   const totalReturn = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
   const cashBalance = user?.cashBalance ?? 0;
-  const totalAccountValue = totalValue + cashBalance;
+  const accountValue = totalValue + cashBalance;
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { duration: 0.6, ease: "easeOut" } },
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  };
+  // Market rows
+  const topGainers   = useMemo(() => [...assets].sort((a, b) => b.changePercent - a.changePercent).slice(0, 20), [assets]);
+  const topLosers    = useMemo(() => [...assets].sort((a, b) => a.changePercent - b.changePercent).slice(0, 20), [assets]);
+  const cryptoAssets = useMemo(() => assets.filter(a => a.category === "crypto").slice(0, 20), [assets]);
+  const aiPicks      = useMemo(() => assets.filter(a => a.signal === "BUY").slice(0, 20), [assets]);
+  const stockAssets  = useMemo(() => assets.filter(a => a.category === "stocks").slice(0, 20), [assets]);
+  const watchlistRow = useMemo(() => {
+    const syms = watchlist?.symbols ?? [];
+    return assets.filter(a => syms.includes(a.symbol));
+  }, [assets, watchlist]);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        selectedSymbol={selectedSymbol}
-        onSymbolSelect={setSelectedSymbol}
-      />
+    <div className="min-h-screen bg-background">
+      {/* HERO */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative overflow-hidden border-b border-border"
+        style={{ background: "linear-gradient(135deg, #020817 0%, #0f172a 40%, #1e1b4b 70%, #0f172a 100%)" }}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_70%_50%,rgba(139,92,246,0.15),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_80%,rgba(59,130,246,0.1),transparent_50%)]" />
 
-      <main className="flex-1 min-w-0 w-full">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={itemVariants}
-          className="bg-card border-b border-border p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-2xl font-800 text-foreground mb-2">Market Overview</h2>
-              <div className="flex items-center space-x-4">
-                <span className="flex items-center text-success">
-                  <div className="w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></div>
-                  Markets Open
-                </span>
-                <span className="text-muted-foreground">
-                  Updated: {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} EST
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="outline"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="border-border hover:bg-muted"
-              >
-                {theme === "dark" ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
-                {theme === "dark" ? "Light" : "Dark"} Mode
-              </Button>
-              <Button variant="outline" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-                Menu
-              </Button>
-            </div>
+        <div className="relative px-6 py-8 lg:px-10 lg:py-12">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+            <span className="text-xs text-green-400 font-medium tracking-wide uppercase">Markets Live</span>
           </div>
-        </motion.div>
 
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-          className="p-6 space-y-6"
-        >
-          <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-600 mb-4">Portfolio Summary</h3>
-            <SummaryCards
-              symbols={watchlist?.symbols || []}
-              onSymbolSelect={setSelectedSymbol}
-              selectedSymbol={selectedSymbol}
+          <h1 className="text-2xl lg:text-4xl font-bold text-white mb-1">
+            Good {getGreeting()}, {user?.username ?? "Trader"}
+          </h1>
+          <p className="text-white/40 text-sm mb-8">
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+          </p>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <HeroStat
+              label="Account Value"
+              value={`$${accountValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              icon={<DollarSign className="h-4 w-4" />}
+              accent="blue"
             />
-          </motion.div>
+            <HeroStat
+              label="Holdings"
+              value={`$${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              icon={<BarChart3 className="h-4 w-4" />}
+              accent="purple"
+            />
+            <HeroStat
+              label="Unrealized P&L"
+              value={`${totalPnL >= 0 ? "+" : ""}$${Math.abs(totalPnL).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              sub={`${totalReturn >= 0 ? "+" : ""}${totalReturn.toFixed(2)}% return`}
+              icon={totalPnL >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              accent={totalPnL >= 0 ? "green" : "red"}
+            />
+            <HeroStat
+              label="Cash Available"
+              value={`$${cashBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              icon={<Wallet className="h-4 w-4" />}
+              accent="green"
+            />
+          </div>
 
-          <motion.div variants={itemVariants}>
-            <PriceChart symbol={selectedSymbol} />
-          </motion.div>
+          <div className="flex flex-wrap gap-2 mt-6">
+            {[
+              { href: "/portfolio", label: "View Portfolio" },
+              { href: "/markets",   label: "Browse Markets" },
+              { href: "/ai-chat",   label: "Ask AI" },
+            ].map(l => (
+              <Link key={l.href} href={l.href}>
+                <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 text-white border border-white/10 transition-colors cursor-pointer">
+                  {l.label}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </motion.div>
 
-          <motion.div variants={itemVariants}>
-            <h3 className="text-lg font-600 mb-4">Technical Indicators</h3>
-            <IndicatorsGrid symbol={selectedSymbol} />
-          </motion.div>
+      {/* CONTENT ROWS */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="px-6 py-8 lg:px-10"
+      >
+        {watchlistRow.length > 0 && (
+          <ContentRow title="Your Watchlist" icon="⭐">
+            {watchlistRow.map(a => (
+              <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} />
+            ))}
+          </ContentRow>
+        )}
 
-          <motion.div variants={itemVariants}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AIInsights symbol={selectedSymbol} />
-              <NewsFeed symbol={selectedSymbol} />
-            </div>
-          </motion.div>
+        <ContentRow title="Top Gainers Today" icon="🚀" loading={isLoading}>
+          {topGainers.map(a => (
+            <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} />
+          ))}
+        </ContentRow>
 
-          {/* Real Portfolio Performance */}
-          <motion.div variants={itemVariants}>
-            <div className="bg-card rounded-lg border border-border p-6">
-              <h3 className="text-lg font-600 mb-6">Portfolio Performance</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div className="text-center">
-                  <div className={`text-2xl font-800 mb-1 flex items-center justify-center gap-1 ${totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {totalReturn >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-                    {totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%
-                  </div>
-                  <div className="text-muted-foreground text-sm">Total Return</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-800 text-foreground mb-1">
-                    ${totalAccountValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <div className="text-muted-foreground text-sm">Account Value</div>
-                </div>
-                <div className="text-center">
-                  <div className={`text-2xl font-800 mb-1 ${totalPnL >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                    {totalPnL >= 0 ? '+' : ''}${Math.abs(totalPnL).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <div className="text-muted-foreground text-sm">Unrealized P&L</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-800 text-foreground mb-1">
-                    ${cashBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
-                  <div className="text-muted-foreground text-sm">Cash Available</div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      </main>
+        {aiPicks.length > 0 && (
+          <ContentRow title="AI Buy Signals" icon="🤖">
+            {aiPicks.map(a => (
+              <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} />
+            ))}
+          </ContentRow>
+        )}
+
+        <ContentRow title="Biggest Drops" icon="📉" loading={isLoading}>
+          {topLosers.map(a => (
+            <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} />
+          ))}
+        </ContentRow>
+
+        {cryptoAssets.length > 0 && (
+          <ContentRow title="Crypto" icon="💰">
+            {cryptoAssets.map(a => (
+              <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} />
+            ))}
+          </ContentRow>
+        )}
+
+        {stockAssets.length > 0 && (
+          <ContentRow title="Stocks" icon="🏛️" loading={isLoading}>
+            {stockAssets.map(a => (
+              <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} />
+            ))}
+          </ContentRow>
+        )}
+      </motion.div>
+
+      {tradeSymbol && (
+        <QuickTradeDialog symbol={tradeSymbol} onClose={() => setTradeSymbol(null)} />
+      )}
     </div>
   );
 }

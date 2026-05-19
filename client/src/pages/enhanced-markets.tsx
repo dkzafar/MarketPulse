@@ -1,23 +1,19 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  TrendingUp, TrendingDown, Activity, BarChart3, Globe, Zap, Filter, 
-  SlidersHorizontal, RefreshCw, Brain, Sparkles, Target, Search,
-  Eye, Plus, Bell, AlertTriangle, DollarSign, Percent, Volume2,
-  ChevronUp, ChevronDown, Star, Heart, LineChart, PieChart,
-  MapPin, Calendar, Clock, Shield, Flame, ThermometerSun
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  TrendingUp, TrendingDown, Search, Brain, RefreshCw,
+  Plus, Heart, Zap, BarChart3, Activity
 } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
+import { cn } from "@/lib/utils";
+import ContentRow from "@/components/content-row";
+import NetflixStockCard from "@/components/netflix-stock-card";
+import QuickTradeDialog from "@/components/quick-trade-dialog";
 
-// Enhanced interface for market data
 interface EnhancedAsset {
   symbol: string;
   name: string;
@@ -29,11 +25,9 @@ interface EnhancedAsset {
   sector: string;
   category: string;
   pe?: number;
-  dividend?: number;
   volatility?: number;
-  sentiment?: 'bullish' | 'bearish' | 'neutral';
-  region: string;
-  signal?: 'BUY' | 'SELL' | 'HOLD' | 'WATCH';
+  sentiment?: "bullish" | "bearish" | "neutral";
+  signal?: "BUY" | "SELL" | "HOLD" | "WATCH";
   aiAnalysis?: {
     analysis: {
       recommendation: string;
@@ -44,700 +38,370 @@ interface EnhancedAsset {
   };
 }
 
-export default function EnhancedMarketsPage() {
-  // Enhanced state management
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSector, setSelectedSector] = useState("all");
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedRegion, setSelectedRegion] = useState("all");
-  const [marketCapFilter, setMarketCapFilter] = useState("all");
-  const [performanceFilter, setPerformanceFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("marketCap");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [viewMode, setViewMode] = useState<"grid" | "list" | "heatmap">("grid");
-  const [selectedAsset, setSelectedAsset] = useState<EnhancedAsset | null>(null);
-  const [alertsOpen, setAlertsOpen] = useState(false);
-  const [watchlist, setWatchlist] = useState<string[]>([]);
+function getSector(symbol: string): string {
+  const tech    = ["AAPL","GOOGL","MSFT","NVDA","META","AMZN","TSLA","NFLX","AMD","INTC","CRM","ADBE","ORCL"];
+  const finance = ["JPM","BAC","WFC","GS","MS","C","AXP","BLK","SCHW"];
+  const health  = ["JNJ","PFE","UNH","ABT","TMO","MRK","ABBV","BMY"];
+  if (tech.includes(symbol))    return "Technology";
+  if (finance.includes(symbol)) return "Financial";
+  if (health.includes(symbol))  return "Healthcare";
+  return "Other";
+}
 
-  // Fetch real market data with enhanced processing
+function getSignal(changePercent: number, volume: number): "BUY" | "SELL" | "HOLD" | "WATCH" {
+  if (changePercent > 5  && volume > 1_000_000) return "BUY";
+  if (changePercent < -5 && volume > 1_000_000) return "SELL";
+  if (Math.abs(changePercent) > 2)              return "WATCH";
+  return "HOLD";
+}
+
+function fmtMktCap(n: number) {
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(1)}T`;
+  if (n >= 1e9)  return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6)  return `$${(n / 1e6).toFixed(1)}M`;
+  return n ? `$${n}` : "—";
+}
+
+export default function EnhancedMarketsPage() {
+  const [searchQuery, setSearchQuery]         = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedAsset, setSelectedAsset]     = useState<EnhancedAsset | null>(null);
+  const [tradeSymbol, setTradeSymbol]         = useState<string | null>(null);
+  const [watchlist, setWatchlist]             = useState<string[]>([]);
+
   const { data: rawMarketData = [], isLoading, refetch } = useQuery({
-    queryKey: ['/api/market-data'],
-    refetchInterval: 15000, // 15 second refresh
+    queryKey: ["/api/market-data"],
+    refetchInterval: 15000,
+    staleTime: 10000,
   });
 
-  // Enhanced market data processing
-  const enhancedMarketData = useMemo(() => {
-    return rawMarketData.map((asset: any): EnhancedAsset => ({
-      symbol: asset.symbol,
-      name: asset.name || asset.symbol,
-      price: asset.price || 0,
-      change: asset.change || 0,
-      changePercent: asset.changePercent || 0,
-      volume: asset.volume || 0,
-      marketCap: asset.marketCap || 0,
-      sector: getSector(asset.symbol),
-      category: asset.category || 'stocks',
-      pe: (asset.category !== 'crypto' && (asset.pe || Math.random() > 0.3)) ? (asset.pe || Math.random() * 30 + 10) : undefined,
-      dividend: asset.dividend || (Math.random() > 0.7 ? Math.random() * 5 : 0),
-      volatility: Math.abs(asset.changePercent) || Math.random() * 10,
-      sentiment: getSentiment(asset.changePercent),
-      region: getRegion(asset.symbol),
-      signal: getAISignal(asset.changePercent, asset.volume)
-    }));
-  }, [rawMarketData]);
-
-  // Smart filtering logic
-  const filteredData = useMemo(() => {
-    let filtered = enhancedMarketData;
-
-    // Search filter
-    if (searchQuery) {
-      filtered = filtered.filter(asset => 
-        asset.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        asset.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Category filter
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(asset => asset.category === selectedCategory);
-    }
-
-    // Sector filter
-    if (selectedSector !== "all") {
-      filtered = filtered.filter(asset => asset.sector === selectedSector);
-    }
-
-    // Region filter
-    if (selectedRegion !== "all") {
-      filtered = filtered.filter(asset => asset.region === selectedRegion);
-    }
-
-    // Market cap filter
-    if (marketCapFilter !== "all") {
-      filtered = filtered.filter(asset => {
-        const cap = asset.marketCap;
-        switch (marketCapFilter) {
-          case "micro": return cap < 300000000;
-          case "small": return cap >= 300000000 && cap < 2000000000;
-          case "mid": return cap >= 2000000000 && cap < 10000000000;
-          case "large": return cap >= 10000000000;
-          default: return true;
-        }
-      });
-    }
-
-    // Performance filter
-    if (performanceFilter !== "all") {
-      switch (performanceFilter) {
-        case "gainers": filtered = filtered.filter(asset => asset.changePercent > 0);
-        case "losers": filtered = filtered.filter(asset => asset.changePercent < 0);
-        case "volatile": filtered = filtered.filter(asset => Math.abs(asset.changePercent) > 5);
-        case "stable": filtered = filtered.filter(asset => Math.abs(asset.changePercent) <= 2);
-      }
-    }
-
-    // Sorting
-    filtered.sort((a, b) => {
-      let aVal: any, bVal: any;
-      switch (sortBy) {
-        case "price": aVal = a.price; bVal = b.price; break;
-        case "change": aVal = a.changePercent; bVal = b.changePercent; break;
-        case "volume": aVal = a.volume; bVal = b.volume; break;
-        case "marketCap": aVal = a.marketCap; bVal = b.marketCap; break;
-        default: aVal = a.marketCap; bVal = b.marketCap;
-      }
-      
-      return sortOrder === "desc" ? bVal - aVal : aVal - bVal;
-    });
-
-    return filtered;
-  }, [enhancedMarketData, searchQuery, selectedCategory, selectedSector, selectedRegion, marketCapFilter, performanceFilter, sortBy, sortOrder]);
-
-  // Market statistics
-  const marketStats = useMemo(() => {
-    const total = filteredData.length;
-    const gainers = filteredData.filter(asset => asset.changePercent > 0).length;
-    const losers = filteredData.filter(asset => asset.changePercent < 0).length;
-    const avgChange = filteredData.reduce((sum, asset) => sum + asset.changePercent, 0) / total || 0;
-    
-    return { total, gainers, losers, avgChange };
-  }, [filteredData]);
-
-  // Helper functions
-  function getSector(symbol: string): string {
-    if (!symbol) return 'Other';
-    const techSymbols = ['AAPL', 'GOOGL', 'MSFT', 'NVDA', 'META', 'AMZN', 'TSLA'];
-    const financeSymbols = ['JPM', 'BAC', 'WFC', 'GS', 'MS', 'C'];
-    const healthSymbols = ['JNJ', 'PFE', 'UNH', 'ABT', 'TMO'];
-    
-    if (techSymbols.includes(symbol)) return 'Technology';
-    if (financeSymbols.includes(symbol)) return 'Financial';
-    if (healthSymbols.includes(symbol)) return 'Healthcare';
-    return 'Other';
-  }
-
-  function getSentiment(changePercent: number): 'bullish' | 'bearish' | 'neutral' {
-    if (!changePercent) return 'neutral';
-    if (changePercent > 2) return 'bullish';
-    if (changePercent < -2) return 'bearish';
-    return 'neutral';
-  }
-
-  function getRegion(symbol: string): string {
-    if (!symbol) return 'US';
-    // Simplified region detection - in real app would use comprehensive mapping
-    if (symbol.includes('.TO')) return 'Canada';
-    if (symbol.includes('.L')) return 'UK';
-    if (symbol.includes('.SS')) return 'China';
-    return 'US';
-  }
-
-  function getAISignal(changePercent: number, volume: number): 'BUY' | 'SELL' | 'HOLD' | 'WATCH' {
-    if (!changePercent || !volume) return 'HOLD';
-    if (changePercent > 5 && volume > 1000000) return 'BUY';
-    if (changePercent < -5 && volume > 1000000) return 'SELL';
-    if (Math.abs(changePercent) > 3) return 'WATCH';
-    return 'HOLD';
-  }
-
-  // AI Analysis integration
   const aiAnalysisMutation = useMutation({
     mutationFn: async (symbol: string) => {
-      const response = await fetch('/api/ai-market-analysis', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ symbol })
+      const res = await fetch("/api/ai-market-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol }),
       });
-      if (!response.ok) throw new Error('Failed to get AI analysis');
-      return response.json();
+      if (!res.ok) throw new Error("Analysis failed");
+      return res.json();
     },
-    onSuccess: (data, symbol) => {
-      console.log('AI Analysis received:', data); // Debug log
+    onSuccess: (data) => {
       setSelectedAsset(prev => prev ? { ...prev, aiAnalysis: data } : null);
-    }
+    },
   });
 
-  const getAIAnalysis = (symbol: string) => {
-    const asset = enhancedMarketData.find(a => a.symbol === symbol);
-    if (asset) {
-      setSelectedAsset(asset);
-      aiAnalysisMutation.mutate(symbol);
+  const allAssets: EnhancedAsset[] = useMemo(() =>
+    (rawMarketData as any[]).map((asset: any): EnhancedAsset => ({
+      symbol:        asset.symbol,
+      name:          asset.name || asset.symbol,
+      price:         asset.price || 0,
+      change:        asset.change || 0,
+      changePercent: asset.changePercent || 0,
+      volume:        asset.volume || 0,
+      marketCap:     asset.marketCap || 0,
+      sector:        getSector(asset.symbol),
+      category:      asset.category || "stocks",
+      pe:            asset.category !== "crypto" && asset.pe ? asset.pe : undefined,
+      volatility:    Math.abs(asset.changePercent) || 0,
+      sentiment:     asset.changePercent > 2 ? "bullish" : asset.changePercent < -2 ? "bearish" : "neutral",
+      signal:        getSignal(asset.changePercent, asset.volume),
+    })),
+    [rawMarketData],
+  );
+
+  const filteredAssets = useMemo(() => {
+    let res = allAssets;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      res = res.filter(a => a.symbol.toLowerCase().includes(q) || a.name.toLowerCase().includes(q));
     }
+    if (selectedCategory !== "all") {
+      res = res.filter(a => a.category === selectedCategory);
+    }
+    return res;
+  }, [allAssets, searchQuery, selectedCategory]);
+
+  // Rows
+  const trending  = useMemo(() => [...filteredAssets].sort((a, b) => b.volume - a.volume).slice(0, 20),          [filteredAssets]);
+  const gainers   = useMemo(() => [...filteredAssets].sort((a, b) => b.changePercent - a.changePercent).slice(0, 20), [filteredAssets]);
+  const losers    = useMemo(() => [...filteredAssets].sort((a, b) => a.changePercent - b.changePercent).slice(0, 20), [filteredAssets]);
+  const aiSignals = useMemo(() => filteredAssets.filter(a => a.signal === "BUY").slice(0, 20),                   [filteredAssets]);
+  const crypto    = useMemo(() => filteredAssets.filter(a => a.category === "crypto").slice(0, 20),              [filteredAssets]);
+  const techRow   = useMemo(() => filteredAssets.filter(a => a.sector === "Technology").slice(0, 20),            [filteredAssets]);
+  const finRow    = useMemo(() => filteredAssets.filter(a => a.sector === "Financial").slice(0, 20),             [filteredAssets]);
+  const healthRow = useMemo(() => filteredAssets.filter(a => a.sector === "Healthcare").slice(0, 20),            [filteredAssets]);
+
+  // Market stats
+  const total      = allAssets.length;
+  const nGainers   = allAssets.filter(a => a.changePercent > 0).length;
+  const nLosers    = allAssets.filter(a => a.changePercent < 0).length;
+  const avgChange  = total > 0 ? allAssets.reduce((s, a) => s + a.changePercent, 0) / total : 0;
+  const bullish    = avgChange >= 0;
+
+  const toggleWatchlist = (symbol: string) =>
+    setWatchlist(prev => prev.includes(symbol) ? prev.filter(s => s !== symbol) : [...prev, symbol]);
+
+  const openAnalysis = (asset: EnhancedAsset) => {
+    setSelectedAsset(asset);
+    if (!asset.aiAnalysis) aiAnalysisMutation.mutate(asset.symbol);
   };
 
-  // Watchlist management
-  const toggleWatchlist = (symbol: string) => {
-    setWatchlist(prev => 
-      prev.includes(symbol) 
-        ? prev.filter(s => s !== symbol)
-        : [...prev, symbol]
-    );
+  const handleAnalyzeBySymbol = (symbol: string) => {
+    const asset = allAssets.find(a => a.symbol === symbol);
+    if (asset) openAnalysis(asset);
   };
+
+  const showRows = !searchQuery && selectedCategory === "all";
 
   return (
-    <div className="min-h-screen bg-background p-4 space-y-6">
-      {/* Enhanced Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4"
-      >
-        <div>
-          <h1 className="text-3xl font-800 text-foreground flex items-center">
-            <BarChart3 className="h-8 w-8 mr-3 text-primary" />
-            Enhanced Markets
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Professional trading dashboard with {enhancedMarketData.length} live assets
-          </p>
-        </div>
-        
-        <div className="flex items-center space-x-3">
-          <Badge variant="outline" className="bg-green-500/10 border-green-500/20 text-green-400">
-            <div className="w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></div>
-            Live Data
-          </Badge>
-          <Button
-            onClick={() => refetch()}
-            variant="outline"
-            disabled={isLoading}
-            className="hover:bg-primary/10"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button
-            onClick={() => setAlertsOpen(true)}
-            variant="outline"
-            className="hover:bg-yellow-500/10"
-          >
-            <Bell className="h-4 w-4 mr-2" />
-            Alerts
-          </Button>
-        </div>
-      </motion.div>
-
-      {/* Market Sentiment & Stats Dashboard */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Card className="bg-card/50 border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <ThermometerSun className="h-5 w-5 mr-2 text-orange-400" />
-              Market Sentiment Dashboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-700 text-green-400">{marketStats.gainers}</div>
-                <div className="text-sm text-muted-foreground">Gainers</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-700 text-red-400">{marketStats.losers}</div>
-                <div className="text-sm text-muted-foreground">Losers</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-700 text-blue-400">{marketStats.total}</div>
-                <div className="text-sm text-muted-foreground">Total Assets</div>
-              </div>
-              <div className="text-center">
-                <div className={`text-2xl font-700 ${marketStats.avgChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {marketStats.avgChange.toFixed(2)}%
-                </div>
-                <div className="text-sm text-muted-foreground">Avg Change</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-700 text-purple-400">
-                  {filteredData.filter(a => a.signal === 'BUY').length}
-                </div>
-                <div className="text-sm text-muted-foreground">AI Buy Signals</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-700 text-yellow-400">{watchlist.length}</div>
-                <div className="text-sm text-muted-foreground">Watchlist</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Advanced Filtering Controls */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card className="bg-card/30 border-border/50">
-          <CardContent className="p-4">
-            <div className="flex flex-wrap gap-4 items-center">
-              {/* Search */}
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search assets..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-background/50"
-                />
-              </div>
-
-              {/* Category Filter */}
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger className="w-[140px] bg-background/50">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="stocks">Stocks</SelectItem>
-                  <SelectItem value="crypto">Crypto</SelectItem>
-                  <SelectItem value="forex">Forex</SelectItem>
-                  <SelectItem value="commodities">Commodities</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Sector Filter */}
-              <Select value={selectedSector} onValueChange={setSelectedSector}>
-                <SelectTrigger className="w-[140px] bg-background/50">
-                  <SelectValue placeholder="Sector" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sectors</SelectItem>
-                  <SelectItem value="Technology">Technology</SelectItem>
-                  <SelectItem value="Financial">Financial</SelectItem>
-                  <SelectItem value="Healthcare">Healthcare</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Market Cap Filter */}
-              <Select value={marketCapFilter} onValueChange={setMarketCapFilter}>
-                <SelectTrigger className="w-[140px] bg-background/50">
-                  <SelectValue placeholder="Market Cap" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Caps</SelectItem>
-                  <SelectItem value="micro">Micro Cap</SelectItem>
-                  <SelectItem value="small">Small Cap</SelectItem>
-                  <SelectItem value="mid">Mid Cap</SelectItem>
-                  <SelectItem value="large">Large Cap</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Performance Filter */}
-              <Select value={performanceFilter} onValueChange={setPerformanceFilter}>
-                <SelectTrigger className="w-[140px] bg-background/50">
-                  <SelectValue placeholder="Performance" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Performance</SelectItem>
-                  <SelectItem value="gainers">Top Gainers</SelectItem>
-                  <SelectItem value="losers">Top Losers</SelectItem>
-                  <SelectItem value="volatile">Most Volatile</SelectItem>
-                  <SelectItem value="stable">Most Stable</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* View Mode */}
-              <div className="flex bg-background/50 rounded-lg p-1">
-                <Button
-                  variant={viewMode === "grid" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("grid")}
-                >
-                  <BarChart3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "list" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("list")}
-                >
-                  <Activity className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === "heatmap" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setViewMode("heatmap")}
-                >
-                  <PieChart className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      {/* Results Counter */}
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredData.length} of {enhancedMarketData.length} assets
-        </p>
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[150px] bg-background/50">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="marketCap">Market Cap</SelectItem>
-            <SelectItem value="price">Price</SelectItem>
-            <SelectItem value="change">% Change</SelectItem>
-            <SelectItem value="volume">Volume</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Enhanced Asset Grid */}
+    <div className="min-h-screen bg-background">
+      {/* HERO */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        className="relative overflow-hidden border-b border-border"
+        style={{ background: "linear-gradient(135deg, #020817 0%, #0f172a 50%, #0c1a0c 100%)" }}
       >
-        <AnimatePresence>
-          {isLoading ? (
-            Array.from({ length: 12 }).map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-card/30 border border-border/50 rounded-xl p-4 animate-pulse"
-              >
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <div className="space-y-2">
-                      <div className="h-4 bg-muted rounded w-16"></div>
-                      <div className="h-3 bg-muted rounded w-24"></div>
-                    </div>
-                    <div className="h-6 bg-muted rounded w-16"></div>
-                  </div>
-                  <div className="h-6 bg-muted rounded w-20"></div>
-                  <div className="h-8 bg-muted rounded w-full"></div>
-                </div>
-              </motion.div>
-            ))
-          ) : (
-            filteredData.map((asset, index) => (
-              <motion.div
-                key={asset.symbol}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ delay: index * 0.05 }}
-                className="group"
-              >
-                <Card className="bg-card/30 border-border/50 hover:bg-card/50 hover:border-primary/20 transition-all duration-300 cursor-pointer hover:shadow-lg">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* Header */}
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-700 text-foreground">{asset.symbol}</h3>
-                            <Badge variant="outline" className="text-xs py-0 px-1">
-                              {asset.sector}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground truncate">{asset.name}</p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleWatchlist(asset.symbol)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Heart 
-                            className={`h-4 w-4 ${watchlist.includes(asset.symbol) ? 'fill-red-500 text-red-500' : ''}`} 
-                          />
-                        </Button>
-                      </div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_60%_40%,rgba(34,197,94,0.12),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_70%,rgba(59,130,246,0.08),transparent_50%)]" />
 
-                      {/* Price & Change */}
-                      <div className="flex justify-between items-center">
-                        <div className="text-lg font-700 text-foreground">
-                          ${asset.price.toFixed(2)}
-                        </div>
-                        <div className={`flex items-center text-sm font-600 ${
-                          asset.changePercent >= 0 ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {asset.changePercent >= 0 ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                          {asset.changePercent.toFixed(2)}%
-                        </div>
-                      </div>
+        <div className="relative px-6 py-8 lg:px-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                <span className="text-xs text-green-400 font-medium uppercase tracking-wide">Live Markets</span>
+              </div>
+              <h1 className="text-2xl lg:text-3xl font-bold text-white">Market Explorer</h1>
+              <p className="text-white/40 text-sm mt-1">{total.toLocaleString()} assets tracked in real-time</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-white/60 hover:text-white"
+              onClick={() => refetch()}
+            >
+              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+              Refresh
+            </Button>
+          </div>
 
-                      {/* AI Signal */}
-                      <div className="flex items-center justify-between">
-                        <Badge 
-                          variant={
-                            asset.signal === 'BUY' ? 'default' : 
-                            asset.signal === 'SELL' ? 'destructive' : 
-                            asset.signal === 'WATCH' ? 'secondary' : 'outline'
-                          }
-                          className="text-xs"
-                        >
-                          <Brain className="h-3 w-3 mr-1" />
-                          {asset.signal}
-                        </Badge>
-                        
-                        <div className="flex items-center space-x-1">
-                          <div className={`w-2 h-2 rounded-full ${
-                            asset.sentiment === 'bullish' ? 'bg-green-400' :
-                            asset.sentiment === 'bearish' ? 'bg-red-400' : 'bg-yellow-400'
-                          }`}></div>
-                          <span className="text-xs text-muted-foreground capitalize">
-                            {asset.sentiment}
-                          </span>
-                        </div>
-                      </div>
+          {/* Market sentiment strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            {[
+              { label: "Advancing",  value: nGainers,             icon: <TrendingUp className="h-4 w-4" />,  color: "text-green-400 bg-green-500/10 border-green-500/20" },
+              { label: "Declining",  value: nLosers,              icon: <TrendingDown className="h-4 w-4" />,color: "text-red-400 bg-red-500/10 border-red-500/20" },
+              { label: "Avg Change", value: `${avgChange >= 0 ? "+" : ""}${avgChange.toFixed(2)}%`, icon: <Activity className="h-4 w-4" />, color: bullish ? "text-green-400 bg-green-500/10 border-green-500/20" : "text-red-400 bg-red-500/10 border-red-500/20" },
+              { label: "AI Picks",   value: aiSignals.length,     icon: <Brain className="h-4 w-4" />,       color: "text-purple-400 bg-purple-500/10 border-purple-500/20" },
+            ].map(s => (
+              <div key={s.label} className={cn("rounded-xl border p-3 backdrop-blur-sm", s.color)}>
+                <div className="flex items-center gap-2 text-xs mb-1 opacity-70">{s.icon}{s.label}</div>
+                <div className="text-lg font-bold text-white">{s.value}</div>
+              </div>
+            ))}
+          </div>
 
-                      {/* Key Metrics */}
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          {asset.category !== 'crypto' && asset.pe ? (
-                            <>
-                              <span className="text-muted-foreground">P/E:</span>
-                              <span className="ml-1 font-600">{asset.pe.toFixed(1)}</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-muted-foreground">Cat:</span>
-                              <span className="ml-1 font-600 capitalize">{asset.category}</span>
-                            </>
-                          )}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Vol:</span>
-                          <span className="ml-1 font-600">
-                            {(asset.volume / 1000000).toFixed(1)}M
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button 
-                          size="sm" 
-                          className="flex-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 border-green-500/20"
-                          onClick={() => setSelectedAsset(asset)}
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Buy
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          className="flex-1"
-                          onClick={() => getAIAnalysis(asset.symbol)}
-                        >
-                          <Brain className="h-3 w-3 mr-1" />
-                          AI Analysis
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))
-          )}
-        </AnimatePresence>
+          {/* Search + filter */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+              <Input
+                placeholder="Search stocks, crypto, ETFs…"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-white/30"
+              />
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {["all", "stocks", "crypto", "forex", "etf"].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={cn(
+                    "px-3 py-2 rounded-lg text-xs font-semibold border transition-all",
+                    selectedCategory === cat
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10 hover:text-white",
+                  )}
+                >
+                  {cat === "all" ? "All Markets" : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </motion.div>
 
-      {/* Empty State */}
-      {!isLoading && filteredData.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-12"
-        >
-          <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-600 text-foreground mb-2">No assets found</h3>
-          <p className="text-muted-foreground">Try adjusting your filters or search query</p>
-        </motion.div>
-      )}
+      {/* CONTENT */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15 }}
+        className="px-6 py-8 lg:px-10"
+      >
+        {searchQuery || selectedCategory !== "all" ? (
+          /* Search results grid */
+          <div>
+            <p className="text-sm text-muted-foreground mb-4">{filteredAssets.length} results</p>
+            <div className="flex flex-wrap gap-4">
+              {filteredAssets.map(a => (
+                <NetflixStockCard
+                  key={a.symbol}
+                  asset={a}
+                  onBuy={setTradeSymbol}
+                  onAnalyze={() => openAnalysis(a)}
+                />
+              ))}
+              {filteredAssets.length === 0 && !isLoading && (
+                <div className="w-full text-center py-16 text-muted-foreground">
+                  <Search className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>No assets found for "{searchQuery}"</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Netflix rows */
+          <>
+            <ContentRow title="Most Active" icon="🔥" loading={isLoading}>
+              {trending.map(a => <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} onAnalyze={() => openAnalysis(a)} />)}
+            </ContentRow>
+
+            <ContentRow title="Top Gainers" icon="🚀" loading={isLoading}>
+              {gainers.map(a => <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} onAnalyze={() => openAnalysis(a)} />)}
+            </ContentRow>
+
+            {aiSignals.length > 0 && (
+              <ContentRow title="AI Buy Signals" icon="🤖">
+                {aiSignals.map(a => <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} onAnalyze={() => openAnalysis(a)} />)}
+              </ContentRow>
+            )}
+
+            <ContentRow title="Biggest Drops" icon="📉" loading={isLoading}>
+              {losers.map(a => <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} onAnalyze={() => openAnalysis(a)} />)}
+            </ContentRow>
+
+            {crypto.length > 0 && (
+              <ContentRow title="Crypto" icon="💰">
+                {crypto.map(a => <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} onAnalyze={() => openAnalysis(a)} />)}
+              </ContentRow>
+            )}
+
+            {techRow.length > 0 && (
+              <ContentRow title="Technology" icon="💻">
+                {techRow.map(a => <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} onAnalyze={() => openAnalysis(a)} />)}
+              </ContentRow>
+            )}
+
+            {finRow.length > 0 && (
+              <ContentRow title="Financial" icon="🏦">
+                {finRow.map(a => <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} onAnalyze={() => openAnalysis(a)} />)}
+              </ContentRow>
+            )}
+
+            {healthRow.length > 0 && (
+              <ContentRow title="Healthcare" icon="⚕️">
+                {healthRow.map(a => <NetflixStockCard key={a.symbol} asset={a} onBuy={setTradeSymbol} onAnalyze={() => openAnalysis(a)} />)}
+              </ContentRow>
+            )}
+          </>
+        )}
+      </motion.div>
 
       {/* AI Analysis Dialog */}
       <Dialog open={!!selectedAsset} onOpenChange={() => setSelectedAsset(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Brain className="h-6 w-6 mr-2 text-purple-400" />
-              AI Analysis: {selectedAsset?.symbol}
-              {aiAnalysisMutation.isPending && (
-                <div className="ml-2 h-4 w-4 animate-spin rounded-full border-2 border-purple-500 border-t-transparent"></div>
-              )}
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center">
+                <Brain className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <div className="font-bold">AI Analysis</div>
+                <div className="text-sm font-normal text-muted-foreground">{selectedAsset?.symbol} · {selectedAsset?.name}</div>
+              </div>
             </DialogTitle>
           </DialogHeader>
-          
-          {selectedAsset && (
-            <div className="space-y-6">
-              {/* Asset Overview */}
-              <Card className="bg-card/30">
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Current Price</div>
-                      <div className="text-lg font-700">${selectedAsset.price.toFixed(2)}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Change</div>
-                      <div className={`text-lg font-700 ${selectedAsset.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {selectedAsset.changePercent.toFixed(2)}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">Volume</div>
-                      <div className="text-lg font-700">{(selectedAsset.volume / 1000000).toFixed(1)}M</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-muted-foreground">AI Signal</div>
-                      <Badge variant={
-                        selectedAsset.signal === 'BUY' ? 'default' : 
-                        selectedAsset.signal === 'SELL' ? 'destructive' : 
-                        'secondary'
-                      }>
-                        {selectedAsset.signal}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* AI Analysis Results */}
-              {selectedAsset?.aiAnalysis && (
-                <Card className="bg-card/30">
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Sparkles className="h-5 w-5 mr-2 text-yellow-400" />
-                      AI Market Analysis
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-background/30 rounded-lg">
-                        <div className="text-2xl font-700 text-primary mb-1">
-                          {selectedAsset.aiAnalysis?.analysis?.recommendation || 'ANALYZING...'}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Recommendation</div>
-                      </div>
-                      <div className="text-center p-4 bg-background/30 rounded-lg">
-                        <div className="text-2xl font-700 text-green-400 mb-1">
-                          {selectedAsset.aiAnalysis?.analysis?.confidence || 0}%
-                        </div>
-                        <div className="text-sm text-muted-foreground">Confidence</div>
-                      </div>
-                      <div className="text-center p-4 bg-background/30 rounded-lg">
-                        <div className="text-2xl font-700 text-blue-400 mb-1">
-                          ${selectedAsset.aiAnalysis?.analysis?.targetPrice?.toFixed(2) || selectedAsset.price.toFixed(2)}
-                        </div>
-                        <div className="text-sm text-muted-foreground">Target Price</div>
-                      </div>
-                    </div>
-                    
-                    {selectedAsset.aiAnalysis?.analysis?.reasoning && (
-                      <div className="p-4 bg-background/30 rounded-lg">
-                        <h4 className="font-600 mb-2">Analysis Reasoning:</h4>
-                        <p className="text-sm text-muted-foreground leading-relaxed">
-                          {selectedAsset.aiAnalysis.analysis.reasoning}
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+          {selectedAsset && (
+            <div className="space-y-4">
+              {/* Price & change */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-muted/20 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">Price</div>
+                  <div className="font-bold">${selectedAsset.price.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                </div>
+                <div className="p-3 bg-muted/20 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">Change</div>
+                  <div className={cn("font-bold", selectedAsset.changePercent >= 0 ? "text-green-500" : "text-red-500")}>
+                    {selectedAsset.changePercent >= 0 ? "+" : ""}{selectedAsset.changePercent.toFixed(2)}%
+                  </div>
+                </div>
+                <div className="p-3 bg-muted/20 rounded-lg">
+                  <div className="text-xs text-muted-foreground mb-1">Signal</div>
+                  <Badge variant={selectedAsset.signal === "BUY" ? "default" : selectedAsset.signal === "SELL" ? "destructive" : "secondary"}>
+                    {selectedAsset.signal}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* AI results */}
+              {aiAnalysisMutation.isPending && (
+                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-purple-500 border-t-transparent mr-3" />
+                  Analyzing with AI…
+                </div>
               )}
 
-              {/* Quick Actions */}
-              <div className="flex flex-col sm:flex-row gap-2">
+              {selectedAsset.aiAnalysis && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg text-center">
+                      <div className="text-xs text-muted-foreground mb-1">Recommendation</div>
+                      <div className="font-bold text-primary text-sm">{selectedAsset.aiAnalysis.analysis.recommendation || "—"}</div>
+                    </div>
+                    <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-center">
+                      <div className="text-xs text-muted-foreground mb-1">Confidence</div>
+                      <div className="font-bold text-green-400">{selectedAsset.aiAnalysis.analysis.confidence || 0}%</div>
+                    </div>
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-center">
+                      <div className="text-xs text-muted-foreground mb-1">Target</div>
+                      <div className="font-bold text-blue-400">${selectedAsset.aiAnalysis.analysis.targetPrice?.toFixed(2) || selectedAsset.price.toFixed(2)}</div>
+                    </div>
+                  </div>
+
+                  {selectedAsset.aiAnalysis.analysis.reasoning && (
+                    <div className="p-4 bg-muted/20 rounded-lg">
+                      <p className="text-sm text-muted-foreground leading-relaxed">{selectedAsset.aiAnalysis.analysis.reasoning}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row gap-2 pt-2">
                 <Button
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white"
-                  onClick={() => {
-                    setSelectedAsset(null);
-                  }}
+                  onClick={() => { setSelectedAsset(null); setTradeSymbol(selectedAsset.symbol); }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add to Portfolio
+                  Buy {selectedAsset.symbol}
                 </Button>
                 <Button
                   variant="outline"
                   className="flex-1"
                   onClick={() => toggleWatchlist(selectedAsset.symbol)}
                 >
-                  <Heart className={`h-4 w-4 mr-2 ${watchlist.includes(selectedAsset.symbol) ? 'fill-red-500 text-red-500' : ''}`} />
-                  {watchlist.includes(selectedAsset.symbol) ? 'Remove Watchlist' : 'Add Watchlist'}
+                  <Heart className={cn("h-4 w-4 mr-2", watchlist.includes(selectedAsset.symbol) && "fill-red-500 text-red-500")} />
+                  {watchlist.includes(selectedAsset.symbol) ? "Watchlisted" : "Add Watchlist"}
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex-1"
-                  onClick={() => getAIAnalysis(selectedAsset.symbol)}
+                  className="shrink-0"
+                  onClick={() => aiAnalysisMutation.mutate(selectedAsset.symbol)}
                   disabled={aiAnalysisMutation.isPending}
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${aiAnalysisMutation.isPending ? 'animate-spin' : ''}`} />
-                  Refresh
+                  <RefreshCw className={cn("h-4 w-4", aiAnalysisMutation.isPending && "animate-spin")} />
                 </Button>
               </div>
             </div>
@@ -745,37 +409,9 @@ export default function EnhancedMarketsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Market Alerts Dialog */}
-      <Dialog open={alertsOpen} onOpenChange={setAlertsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Bell className="h-6 w-6 mr-2 text-yellow-400" />
-              Market Alerts
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-              <div className="flex items-center">
-                <AlertTriangle className="h-5 w-5 text-yellow-400 mr-2" />
-                <span className="font-600">High Volume Alert</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Several assets showing unusual volume spikes
-              </p>
-            </div>
-            <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-              <div className="flex items-center">
-                <TrendingUp className="h-5 w-5 text-green-400 mr-2" />
-                <span className="font-600">Breakout Signals</span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                {filteredData.filter(a => a.signal === 'BUY').length} assets showing buy signals
-              </p>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {tradeSymbol && (
+        <QuickTradeDialog symbol={tradeSymbol} onClose={() => setTradeSymbol(null)} />
+      )}
     </div>
   );
 }

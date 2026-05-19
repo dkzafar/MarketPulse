@@ -752,8 +752,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // AI market analysis endpoint with ALL free AI APIs (matches frontend call)
   app.post("/api/ai-market-analysis", async (req: Request, res: Response) => {
+    const { symbol, price, changePercent, volume, marketCap } = req.body;
     try {
-      const { symbol, price, changePercent, volume, marketCap } = req.body;
       
       // Try ALL available free AI APIs for comprehensive analysis
       let aiProvider = "Advanced Analysis";

@@ -77,7 +77,7 @@ export default function EnhancedMarketsPage() {
       marketCap: asset.marketCap || 0,
       sector: getSector(asset.symbol),
       category: asset.category || 'stocks',
-      pe: asset.pe || Math.random() * 30 + 10, // Will connect to real P/E data
+      pe: (asset.category !== 'crypto' && (asset.pe || Math.random() > 0.3)) ? (asset.pe || Math.random() * 30 + 10) : undefined,
       dividend: asset.dividend || (Math.random() > 0.7 ? Math.random() * 5 : 0),
       volatility: Math.abs(asset.changePercent) || Math.random() * 10,
       sentiment: getSentiment(asset.changePercent),
@@ -559,8 +559,17 @@ export default function EnhancedMarketsPage() {
                       {/* Key Metrics */}
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         <div>
-                          <span className="text-muted-foreground">P/E:</span>
-                          <span className="ml-1 font-600">{asset.pe?.toFixed(1)}</span>
+                          {asset.category !== 'crypto' && asset.pe ? (
+                            <>
+                              <span className="text-muted-foreground">P/E:</span>
+                              <span className="ml-1 font-600">{asset.pe.toFixed(1)}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-muted-foreground">Cat:</span>
+                              <span className="ml-1 font-600 capitalize">{asset.category}</span>
+                            </>
+                          )}
                         </div>
                         <div>
                           <span className="text-muted-foreground">Vol:</span>
@@ -667,10 +676,6 @@ export default function EnhancedMarketsPage() {
                       <Sparkles className="h-5 w-5 mr-2 text-yellow-400" />
                       AI Market Analysis
                     </CardTitle>
-                    {/* Debug display */}
-                    <div className="text-xs text-muted-foreground">
-                      Debug: {JSON.stringify(selectedAsset.aiAnalysis, null, 2)}
-                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -707,32 +712,32 @@ export default function EnhancedMarketsPage() {
               )}
 
               {/* Quick Actions */}
-              <div className="flex space-x-3">
-                <Button 
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
                   className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                   onClick={() => {
-                    // Handle buy action
-                    console.log('Buy action for', selectedAsset.symbol);
+                    setSelectedAsset(null);
                   }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add to Portfolio
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex-1"
                   onClick={() => toggleWatchlist(selectedAsset.symbol)}
                 >
                   <Heart className={`h-4 w-4 mr-2 ${watchlist.includes(selectedAsset.symbol) ? 'fill-red-500 text-red-500' : ''}`} />
-                  {watchlist.includes(selectedAsset.symbol) ? 'Remove from Watchlist' : 'Add to Watchlist'}
+                  {watchlist.includes(selectedAsset.symbol) ? 'Remove Watchlist' : 'Add Watchlist'}
                 </Button>
-                <Button 
+                <Button
                   variant="outline"
+                  className="flex-1"
                   onClick={() => getAIAnalysis(selectedAsset.symbol)}
                   disabled={aiAnalysisMutation.isPending}
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${aiAnalysisMutation.isPending ? 'animate-spin' : ''}`} />
-                  Refresh Analysis
+                  Refresh
                 </Button>
               </div>
             </div>

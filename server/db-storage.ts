@@ -23,6 +23,9 @@ export class DbStorage implements IStorage {
     await db.execute(sql`
       ALTER TABLE users ADD COLUMN IF NOT EXISTS cash_balance real DEFAULT 10000
     `);
+    await db.execute(sql`
+      UPDATE users SET cash_balance = 10000 WHERE cash_balance IS NULL
+    `);
   }
 
   private async seedDemoUser() {

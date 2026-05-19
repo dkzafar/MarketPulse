@@ -1123,7 +1123,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       req.session.userId = user.id;
-      res.json({ user: { id: user.id, username: user.username, email: user.email } });
+      const regCash = await storage.getCashBalance(user.id);
+      res.json({ user: { id: user.id, username: user.username, email: user.email, cashBalance: regCash } });
     } catch (error) {
       console.error("Registration error:", error);
       res.status(400).json({ error: "Registration failed" });
@@ -1139,15 +1140,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Quick demo access for test@example.com
       if (email === 'test@example.com' && password === 'password123') {
-        const demoUser = {
-          id: 1,
-          username: 'demo',
-          email: 'test@example.com'
-        };
-        
         req.session.userId = 1;
         console.log('✓ Demo user logged in successfully');
-        return res.json({ user: demoUser });
+        const demoCash = await storage.getCashBalance(1);
+        return res.json({ user: { id: 1, username: 'demo', email: 'test@example.com', cashBalance: demoCash } });
       }
       
       // For other users, validate with schema
@@ -1164,7 +1160,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       await storage.updateLastLogin(user.id);
       req.session.userId = user.id;
-      res.json({ user: { id: user.id, username: user.username, email: user.email } });
+      const loginCash = await storage.getCashBalance(user.id);
+      res.json({ user: { id: user.id, username: user.username, email: user.email, cashBalance: loginCash } });
     } catch (error) {
       console.error("Login error:", error);
       res.status(400).json({ error: "Login failed" });
